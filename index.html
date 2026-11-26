@@ -8,7 +8,32 @@
     <title>Genie — Career companion</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <div id="root">
+      <main
+        id="live-server-notice"
+        hidden
+        style="max-width: 560px; margin: 12vh auto; padding: 28px; border: 1px solid #e8e5ee; border-radius: 12px; color: #454459; background: #fff; font: 15px/1.6 Arial, sans-serif;"
+      >
+        <h1 style="margin-top: 0; font-size: 22px;">Start Genie Portal on port 5173</h1>
+        <p>VS Code Live Server on port 5500 serves static files and cannot run Genie's React app or API.</p>
+        <p>In VS Code, press <strong>Ctrl+Shift+B</strong> and choose <strong>Run Genie Portal (port 5173)</strong>. Then refresh this page.</p>
+        <a id="open-genie-app" href="http://127.0.0.1:5173/">Open Genie Portal on port 5173</a>
+      </main>
+    </div>
+    <script>
+      if (location.port === "5500") {
+        const appUrl = `http://${location.hostname}:5173/`;
+        document.querySelector("#live-server-notice").hidden = false;
+        document.querySelector("#open-genie-app").href = appUrl;
+        fetch(appUrl, { mode: "no-cors", cache: "no-store" })
+          .then(() => location.replace(appUrl))
+          .catch(() => {});
+      }
+    </script>
+    <script type="module">
+      if (location.port !== "5500") {
+        import("/src/main.jsx");
+      }
+    </script>
   </body>
 </html>
