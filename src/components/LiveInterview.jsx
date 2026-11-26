@@ -17,6 +17,12 @@ function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition;
 }
 
+function formatListeningDuration(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
 export default function LiveInterview({ role, onSpeakingChange, onListeningChange, onCandidateAnswer, onCandidateEvaluation, onInterviewStart, onInterviewComplete, onViewTranscript, controlsRef }) {
   const [history, setHistory] = useState([]);
   const [draft, setDraft] = useState("");
@@ -24,6 +30,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   const [started, setStarted] = useState(false);
   const [ended, setEnded] = useState(false);
   const [listening, setListening] = useState(false);
+  const [listeningDuration, setListeningDuration] = useState(0);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [error, setError] = useState("");
   const [resumeContext, setResumeContext] = useState("");
@@ -33,6 +40,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   const continueListeningRef = useRef(false);
   const recognitionRestartRef = useRef(null);
   const networkRetryCountRef = useRef(0);
+  const listeningStartedAtRef = useRef(null);
   const startedRef = useRef(false);
   const endedRef = useRef(false);
   const reportSentRef = useRef(false);
@@ -40,6 +48,13 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   startedRef.current = started;
   endedRef.current = ended;
   const updateListening = (active) => {
+    if (active && listeningStartedAtRef.current === null) {
+      listeningStartedAtRef.current = Date.now();
+      setListeningDuration(0);
+    } else if (!active && listeningStartedAtRef.current !== null) {
+      setListeningDuration(Math.floor((Date.now() - listeningStartedAtRef.current) / 1000));
+      listeningStartedAtRef.current = null;
+    }
     setListening(active);
     onListeningChange(active);
   };
@@ -47,6 +62,16 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     recognitionTranscriptRef.current,
     recognitionInterimRef.current,
   ].filter(Boolean).join(" ").trim();
+
+  useEffect(() => {
+    if (!listening) return undefined;
+    const timer = window.setInterval(() => {
+      if (listeningStartedAtRef.current !== null) {
+        setListeningDuration(Math.floor((Date.now() - listeningStartedAtRef.current) / 1000));
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [listening]);
 
   useEffect(() => () => {
     continueListeningRef.current = false;
@@ -413,9 +438,19 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
                 disabled={busy}
               />
               <div className="live-interview-actions">
-                <button type="button" className={listening ? "listening" : ""} onClick={() => toggleListening()} disabled={busy}>
-                  {listening ? "Stop listening" : "Start speaking"}
-                </button>
+                <div className="live-interview-recording-controls">
+                  <button type="button" className={listening ? "listening" : ""} onClick={() => toggleListening()} disabled={busy}>
+                    {listening ? "Stop listening" : "Start speaking"}
+                  </button>
+                  <span
+                    className={`live-interview-timer${listening ? " is-active" : ""}`}
+                    role="timer"
+                    aria-label={`Listening time ${formatListeningDuration(listeningDuration)}`}
+                  >
+                    {listening && <span aria-hidden="true">● </span>}
+                    {formatListeningDuration(listeningDuration)}
+                  </span>
+                </div>
                 <button type="submit" className="primary-button" disabled={!draft.trim() || busy || listening}>
                   {busy ? "Sending…" : "Send answer"}
                 </button>
@@ -423,7 +458,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
             </form>
           )}
           <div className="live-interview-footer">
-            <span>{ended ? "Interview ended. See Chat for your report." : listening ? "Listening… your words appear in the answer box. Stop listening to review them." : "Use Start speaking to dictate an answer, or type it in the answer box."}</span>
+            <span>{ended ? "Interview ended. See Chat for your report." : listening ? "Listening… your words appear in the answer box. Stop listening to review them." : listeningDuration ? `Listening stopped at ${formatListeningDuration(listeningDuration)}. Review your answer, then send it for feedback.` : "Use Start speaking to dictate an answer, or type it in the answer box."}</span>
             {started && <button type="button" onClick={() => onViewTranscript(history)}>View transcript</button>}
             {ended ? (
               <button type="button" onClick={startInterview} disabled={busy}>Start again</button>
