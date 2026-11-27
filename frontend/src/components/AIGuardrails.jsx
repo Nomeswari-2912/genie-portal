@@ -113,10 +113,7 @@ export default function AIGuardrails() {
       <section className="guardrails-dashboard" aria-labelledby="guardrails-title">
         <header className="guardrails-dashboard-heading">
           <span className="guardrails-shield" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 3 20 6v5.5c0 4.7-3.1 8-8 9.5-4.9-1.5-8-4.8-8-9.5V6l8-3Z" />
-              <path d="m8.5 12 2.2 2.2 4.8-5" />
-            </svg>
+            <img src="/ai-guardrails-icon.png" alt="" />
           </span>
           <h2 id="guardrails-title">AI Guardrails Dashboard</h2>
           <span className={`guardrails-active ${statusLabel === "Active" ? "" : "is-unavailable"}`}>
