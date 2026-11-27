@@ -68,7 +68,7 @@ export function createGuardrailMonitor() {
     { name: "Input validation", detail: "Request schemas, sizes, and roles are checked.", status: "Active" },
     { name: "Content moderation", detail: "High-risk requests are screened and provider safety filters are enabled.", status: "Active" },
     { name: "Privacy protection", detail: "Common personal-data patterns are flagged; request text is not retained.", status: "Active" },
-    { name: "Output validation", detail: "AI responses are checked before being returned to the app.", status: "Active" },
+    { name: "Provider safety filters", detail: "Gemini applies harm-category safety thresholds to generated responses.", status: "Active" },
   ];
 
   const middleware = (request, response, next) => {

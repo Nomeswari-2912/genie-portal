@@ -1056,8 +1056,11 @@ button { cursor: pointer; }
 .guardrails-dashboard-heading h2 { margin: 0; font-size: 16px; font-weight: 700; }
 .guardrails-active { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 5px 9px; border-radius: 20px; color: #58ce70; background: #0c2511; font-size: 10px; font-weight: 700; }
 .guardrails-active i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.guardrails-active.is-unavailable { color: #ff7b83; background: #2b1113; }
 .guardrails-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.guardrails-metric { min-height: 104px; display: flex; flex-direction: column; justify-content: space-between; gap: 9px; padding: 15px; border-radius: 14px; background: #191919; }
+.guardrails-metric { width: 100%; min-height: 104px; display: flex; flex-direction: column; justify-content: space-between; gap: 9px; border: 0; padding: 15px; border-radius: 14px; color: inherit; background: #191919; font: inherit; text-align: left; cursor: pointer; transition: background .15s ease, box-shadow .15s ease; }
+.guardrails-metric:hover, .guardrails-metric.is-selected { background: #222; box-shadow: inset 0 0 0 1px #5b4b87; }
+.guardrails-metric:focus-visible, .guardrails-clear-filter:focus-visible { outline: 2px solid #9c83e7; outline-offset: 2px; }
 .guardrails-metric strong { font-size: 29px; line-height: 1; }
 .guardrails-metric span { color: #dedede; font-size: 12px; }
 .guardrails-metric.allowed strong { color: #4cbd63; }
@@ -1075,6 +1078,8 @@ button { cursor: pointer; }
 .guardrails-control-state { flex: 0 0 auto; color: #58ce70; font-size: 11px; font-weight: 600; }
 .guardrails-activity-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .guardrails-activity-heading > span { color: #929292; font-size: 9px; }
+.guardrails-clear-filter { border: 0; padding: 0; color: #b5a2e8; background: transparent; font-size: 9px; cursor: pointer; }
+.guardrails-clear-filter:hover { color: #d3c5f6; text-decoration: underline; }
 .guardrails-events { gap: 0; }
 .guardrails-events li { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #1e1e1e; }
 .guardrails-event-decision { width: fit-content; border-radius: 12px; padding: 4px 7px; font-size: 8px; font-weight: 700; text-transform: capitalize; }

@@ -37,7 +37,16 @@ export default function AIGuardrails() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [activityFilter, setActivityFilter] = useState(null);
   const refreshRef = useRef(null);
+  const statusLabel = error ? "Unavailable" : loading && !snapshot ? "Connecting" : "Active";
+  const filteredEvents = snapshot?.recentEvents.filter((event) => {
+    if (!activityFilter) return true;
+    if (activityFilter === "allowedRequests") return event.decision === "allowed";
+    if (activityFilter === "blockedRequests") return event.decision === "blocked";
+    if (activityFilter === "privacyWarnings") return event.labels.includes("Privacy warning");
+    return event.labels.some((label) => label.startsWith("Restricted topic:"));
+  }) ?? [];
 
   useEffect(() => {
     let active = true;
@@ -110,15 +119,24 @@ export default function AIGuardrails() {
             </svg>
           </span>
           <h2 id="guardrails-title">AI Guardrails Dashboard</h2>
-          <span className="guardrails-active"><i /> Active</span>
+          <span className={`guardrails-active ${statusLabel === "Active" ? "" : "is-unavailable"}`}>
+            <i /> {statusLabel}
+          </span>
         </header>
 
         <div className="guardrails-metrics" aria-live="polite">
           {metrics.map(({ key, label, tone }) => (
-            <article className={`guardrails-metric ${tone}`} key={key}>
+            <button
+              type="button"
+              className={`guardrails-metric ${tone} ${activityFilter === key ? "is-selected" : ""}`}
+              key={key}
+              aria-label={`${label}: ${loading ? "loading" : snapshot?.[key] ?? "unavailable"}. Click to filter recent activity.`}
+              aria-pressed={activityFilter === key}
+              onClick={() => setActivityFilter((current) => current === key ? null : key)}
+            >
               <strong>{loading ? "—" : snapshot?.[key] ?? "—"}</strong>
               <span>{label}</span>
-            </article>
+            </button>
           ))}
         </div>
 
@@ -145,16 +163,27 @@ export default function AIGuardrails() {
 
         <section className="guardrails-activity" aria-labelledby="guardrails-activity-title">
           <div className="guardrails-activity-heading">
-            <h3 id="guardrails-activity-title">Recent activity</h3>
+            <h3 id="guardrails-activity-title">
+              {activityFilter ? `Recent activity · ${metrics.find(({ key }) => key === activityFilter)?.label}` : "Recent activity"}
+            </h3>
+            {activityFilter && (
+              <button type="button" className="guardrails-clear-filter" onClick={() => setActivityFilter(null)}>
+                Clear filter
+              </button>
+            )}
             {snapshot?.startedAt && <span>Since {formatEventTime(snapshot.startedAt)}</span>}
           </div>
-          {!snapshot?.recentEvents.length ? (
+          {!filteredEvents.length ? (
             <p className="guardrails-empty">
-              {loading ? "Loading recent activity…" : "No requests monitored yet. Activity appears as Genie is used."}
+              {loading
+                ? "Loading recent activity…"
+                : activityFilter
+                  ? "No matching requests in recent activity."
+                  : "No requests monitored yet. Activity appears as Genie is used."}
             </p>
           ) : (
             <ul className="guardrails-events">
-              {snapshot.recentEvents.map((event, index) => (
+              {filteredEvents.map((event, index) => (
                 <li key={`${event.timestamp}-${index}`}>
                   <span className={`guardrails-event-decision ${event.decision}`}>{event.decision}</span>
                   <span className="guardrails-event-details">

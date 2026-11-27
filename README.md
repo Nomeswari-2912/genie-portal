@@ -44,6 +44,7 @@ commit `.env`.
 Open **AI Safety & Guardrails** from the sidebar to review live request counts,
 privacy warnings, restricted-topic blocks, and recent safety events. The monitor
 stores aggregate counts and event metadata only; it does not retain request
-text, and its in-memory counters reset when the server restarts. This read-only
-page is visible to anyone who can access the app; the project does not currently
-have administrator accounts or role-based access.
+text, and its in-memory counters reset when the server restarts. Select a metric
+to filter recent activity, or use **Refresh** to fetch the latest snapshot. This
+read-only page is visible to anyone who can access the app; the project does not
+currently have administrator accounts or role-based access.
