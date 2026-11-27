@@ -3,25 +3,25 @@ import React, { useState } from "react";
 const months = {
   Sep: {
     name: "September",
-    year: 2024,
+    year: 2027,
     month: 8,
     statuses: { 2: "present", 3: "present", 4: "late", 5: "present", 6: "late", 9: "present", 10: "present", 11: "present", 12: "late", 13: "present", 16: "present", 17: "late", 18: "present", 19: "absent", 20: "present", 23: "present", 24: "present", 25: "late", 26: "present", 27: "absent", 30: "present" },
   },
   Oct: {
     name: "October",
-    year: 2024,
+    year: 2027,
     month: 9,
     statuses: { 1: "present", 2: "present", 3: "present", 4: "late", 5: "late", 8: "present", 9: "present", 10: "present", 11: "late", 12: "late", 15: "present", 16: "late", 17: "present", 18: "late", 19: "late", 22: "present", 23: "present", 24: "absent", 25: "absent", 28: "present", 29: "late", 30: "absent", 31: "present" },
   },
   Nov: {
     name: "November",
-    year: 2024,
+    year: 2027,
     month: 10,
     statuses: { 1: "present", 4: "present", 5: "present", 6: "present", 7: "present", 8: "present", 11: "present", 12: "present", 13: "present", 14: "present", 15: "present", 18: "present", 19: "present", 20: "present", 21: "present", 22: "present", 25: "present", 26: "present", 27: "present", 28: "present", 29: "present" },
   },
   Dec: {
     name: "December",
-    year: 2024,
+    year: 2027,
     month: 11,
     statuses: { 2: "present", 3: "present", 4: "late", 5: "present", 6: "present", 9: "present", 10: "present", 11: "present", 12: "late", 13: "present", 16: "present", 17: "present", 18: "present", 19: "absent", 20: "present", 23: "present", 24: "late", 26: "present", 27: "present", 30: "present", 31: "present" },
   },
@@ -29,7 +29,7 @@ const months = {
 
 const reports = {
   "oct-nov": {
-    label: "01/10/2024 - 30/11/2024",
+    label: "01/10/2027 - 30/11/2027",
     monthKeys: ["Oct", "Nov"],
     present: 40,
     absent: 4,
@@ -37,7 +37,7 @@ const reports = {
     rate: 70,
   },
   "nov-dec": {
-    label: "01/11/2024 - 31/12/2024",
+    label: "01/11/2027 - 31/12/2027",
     monthKeys: ["Nov", "Dec"],
     present: 38,
     absent: 5,
@@ -181,7 +181,7 @@ export default function AttendanceReport() {
           </article>
           <article className="attendance-chart-card semester-card">
             <div className="semester-card-heading">
-              <h3>First Semester 2024/2025</h3>
+              <h3>First Semester 2027/2028</h3>
               <div className="attendance-legend chart-legend">
                 <span><i className="legend-present" />Present</span>
                 <span><i className="legend-absent" />Absent</span>
