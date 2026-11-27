@@ -439,7 +439,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
               />
               <div className="live-interview-actions">
                 <div className="live-interview-recording-controls">
-                  <button type="button" className={listening ? "listening" : ""} onClick={() => toggleListening()} disabled={busy}>
+                  <button type="button" className="primary-button live-interview-mic-button" onClick={() => toggleListening()} disabled={busy}>
                     {listening ? "Stop listening" : "Start speaking"}
                   </button>
                   <span

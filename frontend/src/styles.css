@@ -891,11 +891,12 @@ button { cursor: pointer; }
 .live-interview-compose textarea:focus { border-color: #ac9ae6; box-shadow: 0 0 0 3px #f4f1fc; }
 .live-interview-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 7px; }
 .live-interview-recording-controls { display: flex; align-items: center; gap: 8px; }
+.live-interview-actions .live-interview-mic-button { background: #b5a4e7; }
+.live-interview-actions .live-interview-mic-button:hover:not(:disabled) { background: #a48fdd; }
 .live-interview-timer { min-width: 34px; color: #777487; font-size: 8px; font-variant-numeric: tabular-nums; }
 .live-interview-timer.is-active { color: #c34a59; font-weight: 600; }
-.live-interview-actions > button:first-child, .live-interview-footer > button { min-height: 28px; border: 1px solid #e7e4ed; border-radius: 6px; padding: 0 9px; color: #6d687c; background: #fff; font-size: 8px; }
-.live-interview-actions > button.listening { border-color: #f0cbd0; color: #c34a59; background: #fff6f7; }
-.live-interview-actions > button:disabled, .live-interview-footer > button:disabled { cursor: not-allowed; opacity: .5; }
+.live-interview-recording-controls > button:not(.primary-button), .live-interview-footer > button { min-height: 28px; border: 1px solid #e7e4ed; border-radius: 6px; padding: 0 9px; color: #6d687c; background: #fff; font-size: 8px; }
+.live-interview-recording-controls > button:disabled, .live-interview-footer > button:disabled { cursor: not-allowed; opacity: .5; }
 .live-interview-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
 .live-interview-footer > span { color: #9794a2; font-size: 7px; line-height: 1.5; }
 .live-interview-error { margin: 8px 0 0; padding: 8px 9px; border: 1px solid #f1d4d7; border-radius: 6px; color: #a43e4b; background: #fff8f8; font-size: 8px; line-height: 1.5; }
@@ -904,7 +905,7 @@ button { cursor: pointer; }
 .chat-assistant-status { align-self: flex-start; color: #777487; background: #f5f4f8; }
 .chat-assistant-error { color: #a43e4b; background: #fff3f3; }
 .session-message.system .session-message-body p { white-space: pre-wrap; }
-.live-interview-actions > button:focus-visible, .live-interview-footer > button:focus-visible, .voice-output-toggle:focus-visible { outline: 2px solid #ac9ae6; outline-offset: 2px; }
+.live-interview-recording-controls > button:focus-visible, .live-interview-footer > button:focus-visible, .voice-output-toggle:focus-visible { outline: 2px solid #ac9ae6; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .candidate-scene.is-speaking .candidate-smile, .candidate-scene.is-speaking .candidate-head { animation: none; }
 }
