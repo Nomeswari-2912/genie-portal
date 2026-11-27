@@ -322,7 +322,7 @@ export default function DoubtClarification() {
         </div>
 
         <aside className="doubt-aside">
-          <div className="doubt-tip"><span className="tip-sparkle">✧</span><span className="section-kicker">HOW GENIE HELPS</span><p>Ask a question directly or upload a screenshot from any subject.</p></div>
+          <div className="doubt-tip"><img className="tip-genie-icon" src="/genie-mascot.png" alt="" /><span className="section-kicker">HOW GENIE HELPS</span><p>Ask a question directly or upload a screenshot from any subject.</p></div>
           <div className="doubt-tip"><span className="tip-sparkle">↺</span><span className="section-kicker">TAKE YOUR TIME</span><p>Genie answers typed questions and explains screenshots in your chosen language.</p></div>
         </aside>
       </div>

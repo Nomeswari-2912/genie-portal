@@ -513,6 +513,7 @@ button { cursor: pointer; }
 .action-feedback { display: block; margin-top: 6px; color: #549a79; font-size: 8px; text-align: right; }
 .doubt-aside { display: grid; gap: 10px; }
 .doubt-tip { padding: 13px 12px; border: 1px solid #eeeaf5; border-radius: 9px; background: linear-gradient(145deg,#f5f1fc,#fff); }
+.tip-genie-icon { display: block; width: 40px; height: 40px; margin-bottom: 8px; object-fit: contain; }
 .tip-sparkle { display: block; margin-bottom: 8px; color: #987bdb; font-size: 17px; }
 .doubt-tip > .section-kicker { font-size: 7px; }
 .doubt-tip p { margin: 8px 0 1px; color: #777487; font-size: 9px; line-height: 1.7; }
