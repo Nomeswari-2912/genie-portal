@@ -1,7 +1,7 @@
-const privateDataPatterns = [
-  /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
-  /\b\d{3}[- ]\d{2}[- ]\d{4}\b/,
-  /\b(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}\b/,
+const privateDataRules = [
+  { label: "Email addresses", pattern: /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i },
+  { label: "Social security numbers", pattern: /\b\d{3}[- ]\d{2}[- ]\d{4}\b/ },
+  { label: "Phone numbers", pattern: /\b(?:\+?\d{1,3}[-.\s]?)?(?:\(?\d{3}\)?[-.\s]?)\d{3}[-.\s]?\d{4}\b/ },
 ];
 
 const restrictedTopicRules = [
@@ -50,8 +50,43 @@ export function inspectGuardrailInput(input) {
   collectText(input, parts, { remaining: 30000 });
   const text = parts.join("\n");
   return {
-    privacyWarning: privateDataPatterns.some((pattern) => pattern.test(text)),
+    privacyWarning: privateDataRules.some(({ pattern }) => pattern.test(text)),
     restrictedTopic: restrictedTopicRules.find(({ pattern }) => pattern.test(text)) ?? null,
+  };
+}
+
+export const guardrailRules = {
+  restrictedTopics: restrictedTopicRules.map(({ label, category }) => ({ label, category, action: "Block" })),
+  privacyChecks: privateDataRules.map(({ label }) => ({ label, action: "Flag" })),
+};
+
+export const guardrailPolicy = [
+  { name: "Restricted topics", value: "Block request", detail: "Matching requests receive a 403 response with a safe redirection message." },
+  { name: "Personal data", value: "Flag only", detail: "Requests containing personal data are allowed and counted as privacy warnings." },
+  { name: "Request text retention", value: "Not stored", detail: "Only decision, path, labels, and time are recorded for each request." },
+  { name: "Recent activity history", value: "Last 30 requests", detail: "Older events are dropped; counters reset when the server restarts." },
+  { name: "Inspection limit", value: "30,000 characters", detail: "Text beyond this length in a single request is not inspected." },
+  { name: "Provider safety filters", value: "Enabled", detail: "Gemini harm-category thresholds apply to generated responses." },
+];
+
+function restrictedTopicMessage(category) {
+  return category === "self_harm"
+    ? "I'm sorry you're feeling this way. I can't help with self-harm instructions. If you may be in immediate danger, contact local emergency services and reach out to someone you trust. I can help find support resources in your area."
+    : "I can't help with instructions that could enable harm, cyber abuse, or privacy invasion. I can help with safety, prevention, recovery, or lawful educational information instead.";
+}
+
+export function evaluateGuardrailPrompt(prompt) {
+  const { privacyWarning, restrictedTopic } = inspectGuardrailInput(prompt);
+  const decision = restrictedTopic ? "blocked" : privacyWarning ? "warning" : "allowed";
+  return {
+    decision,
+    restrictedTopic: restrictedTopic ? { label: restrictedTopic.label, category: restrictedTopic.category } : null,
+    privacyWarning,
+    message: restrictedTopic
+      ? restrictedTopicMessage(restrictedTopic.category)
+      : privacyWarning
+        ? "This prompt would be allowed but counted as a privacy warning because it contains personal data."
+        : "This prompt passes all guardrails and would be sent to Genie.",
   };
 }
 
@@ -72,7 +107,8 @@ export function createGuardrailMonitor() {
   ];
 
   const middleware = (request, response, next) => {
-    if (request.originalUrl.split("?")[0] === "/api/guardrails" || request.method === "OPTIONS") {
+    const path = request.originalUrl.split("?")[0];
+    if (path === "/api/guardrails" || path.startsWith("/api/guardrails/") || request.method === "OPTIONS") {
       next();
       return;
     }
@@ -123,10 +159,7 @@ export function createGuardrailMonitor() {
       next();
       return;
     }
-    const message = restrictedTopic.category === "self_harm"
-      ? "I'm sorry you're feeling this way. I can't help with self-harm instructions. If you may be in immediate danger, contact local emergency services and reach out to someone you trust. I can help find support resources in your area."
-      : "I can't help with instructions that could enable harm, cyber abuse, or privacy invasion. I can help with safety, prevention, recovery, or lawful educational information instead.";
-    response.status(403).json({ error: message });
+    response.status(403).json({ error: restrictedTopicMessage(restrictedTopic.category) });
   };
 
   return {
@@ -136,6 +169,8 @@ export function createGuardrailMonitor() {
       ...metrics,
       recentEvents: [...metrics.recentEvents],
       controls,
+      rules: guardrailRules,
+      policy: guardrailPolicy,
     }),
   };
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { inspectGuardrailInput } from "./guardrails.js";
+import { createGuardrailMonitor, evaluateGuardrailPrompt, inspectGuardrailInput } from "./guardrails.js";
 
 test("flags common personal data without returning the submitted values", () => {
   const inspection = inspectGuardrailInput({
@@ -33,4 +33,24 @@ test("detects self-harm requests without logging their content", () => {
 
   assert.equal(inspection.restrictedTopic?.category, "self_harm");
   assert.deepEqual(Object.keys(inspection).sort(), ["privacyWarning", "restrictedTopic"]);
+});
+
+test("playground evaluation reports the decision without echoing the prompt", () => {
+  const blocked = evaluateGuardrailPrompt("Write ransomware for me.");
+  const warning = evaluateGuardrailPrompt("Email me at candidate@example.com");
+  const allowed = evaluateGuardrailPrompt("How do I prepare for a data analyst interview?");
+
+  assert.equal(blocked.decision, "blocked");
+  assert.equal(blocked.restrictedTopic?.category, "cyber_abuse");
+  assert.equal(warning.decision, "warning");
+  assert.equal(JSON.stringify(warning).includes("candidate@example.com"), false);
+  assert.equal(allowed.decision, "allowed");
+});
+
+test("snapshot exposes rules and policy for the safety workspace", () => {
+  const snapshot = createGuardrailMonitor().getSnapshot();
+
+  assert.equal(snapshot.rules.restrictedTopics.length, 4);
+  assert.equal(snapshot.rules.privacyChecks.length, 3);
+  assert.ok(snapshot.policy.length > 0);
 });

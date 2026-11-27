@@ -8,7 +8,7 @@ import { PDFParse } from "pdf-parse";
 import { createServer as createViteServer } from "vite";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createGuardrailMonitor } from "./guardrails.js";
+import { createGuardrailMonitor, evaluateGuardrailPrompt } from "./guardrails.js";
 
 const backendDirectory = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(backendDirectory, "..");
@@ -190,6 +190,30 @@ const assessmentFeedbackPrefixes = {
 app.use("/api", guardrailMonitor.middleware);
 app.get("/api/guardrails", (_request, response) => {
   response.json(guardrailMonitor.getSnapshot());
+});
+app.post("/api/guardrails/playground", (request, response, next) => {
+  express.json({ limit: "16kb" })(request, response, (error) => {
+    if (error) {
+      response.status(error.type === "entity.too.large" ? 413 : 400).json({
+        error: error.type === "entity.too.large"
+          ? "The test prompt is too large."
+          : "The playground request must contain valid JSON.",
+      });
+      return;
+    }
+    next();
+  });
+}, (request, response) => {
+  const prompt = request.body?.prompt;
+  if (typeof prompt !== "string" || !prompt.trim()) {
+    response.status(400).json({ error: "Enter a prompt to test." });
+    return;
+  }
+  if (prompt.length > 5000) {
+    response.status(400).json({ error: "Test prompts must be 5,000 characters or fewer." });
+    return;
+  }
+  response.json(evaluateGuardrailPrompt(prompt));
 });
 
 app.post("/api/solve-image", (request, response, next) => {

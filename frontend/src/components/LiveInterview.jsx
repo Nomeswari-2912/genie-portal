@@ -34,6 +34,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   const [transcribing, setTranscribing] = useState(false);
   const [answerCaptureComplete, setAnswerCaptureComplete] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [autoMode, setAutoMode] = useState(true);
   const [error, setError] = useState("");
   const [resumeContext, setResumeContext] = useState("");
   const recognitionRef = useRef(null);
@@ -50,6 +51,11 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   const listeningStartedAtRef = useRef(null);
   const startedRef = useRef(false);
   const endedRef = useRef(false);
+  const autoSubmitPendingRef = useRef(false);
+  const lastSpeechAtRef = useRef(0);
+  const hasSpeechRef = useRef(false);
+  const speakingRef = useRef(false);
+  const speechTokenRef = useRef(0);
   const reportSentRef = useRef(false);
   const candidateAnswerIndexRef = useRef(0);
   startedRef.current = started;
@@ -193,22 +199,23 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   }, [onListeningChange, onSpeakingChange]);
 
   const speak = (text, onComplete) => {
-    if (!voiceEnabled || !window.speechSynthesis) {
+    const token = ++speechTokenRef.current;
+    const finish = () => {
+      if (token !== speechTokenRef.current) return;
+      speakingRef.current = false;
       onSpeakingChange(false);
       onComplete?.();
+    };
+    if (!voiceEnabled || !window.speechSynthesis) {
+      finish();
       return;
     }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.onstart = () => onSpeakingChange(true);
-    utterance.onend = () => {
-      onSpeakingChange(false);
-      onComplete?.();
-    };
-    utterance.onerror = () => {
-      onSpeakingChange(false);
-      onComplete?.();
-    };
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    speakingRef.current = true;
     window.speechSynthesis.speak(utterance);
   };
 
@@ -362,6 +369,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
       } else {
         updateListening(false);
       }
+      if (autoMode) autoSubmitPendingRef.current = true;
       stopAudioRecording();
       return;
     }
@@ -370,6 +378,10 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
       return;
     }
     if ((busy && !forceStart) || endedRef.current) return;
+    if (speakingRef.current) {
+      setError("Genie is still speaking. Wait for the question to finish, then answer.");
+      return;
+    }
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition && (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder)) {
       setError("Voice input is not supported in this browser. Type your answer and select Send answer.");
@@ -380,6 +392,8 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     recognitionTranscriptRef.current = "";
     recognitionInterimRef.current = "";
     networkRetryCountRef.current = 0;
+    hasSpeechRef.current = false;
+    lastSpeechAtRef.current = Date.now();
     setAnswerCaptureComplete(false);
     setTranscribing(false);
     let recognition = null;
@@ -401,7 +415,11 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
           }
         }
         recognitionInterimRef.current = interimTranscript;
-        if (interimTranscript || recognitionTranscriptRef.current) networkRetryCountRef.current = 0;
+        if (interimTranscript || recognitionTranscriptRef.current) {
+          networkRetryCountRef.current = 0;
+          hasSpeechRef.current = true;
+          lastSpeechAtRef.current = Date.now();
+        }
         setDraft(getRecognitionTranscript());
         setError("");
       };
@@ -503,8 +521,31 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     }
   };
 
+  useEffect(() => {
+    if (!listening || !autoMode) return undefined;
+    const timer = window.setInterval(() => {
+      if (hasSpeechRef.current && Date.now() - lastSpeechAtRef.current > 4000) {
+        hasSpeechRef.current = false;
+        toggleListening();
+      }
+    }, 400);
+    return () => window.clearInterval(timer);
+  }, [listening, autoMode]);
+
+  useEffect(() => {
+    if (!autoSubmitPendingRef.current || busy || listening || transcribing) return;
+    const answer = draft.trim();
+    if (!answer) {
+      if (answerCaptureComplete) autoSubmitPendingRef.current = false;
+      return;
+    }
+    autoSubmitPendingRef.current = false;
+    submitAnswer(answer);
+  });
+
   const sendTypedAnswer = (event) => {
     event.preventDefault();
+    autoSubmitPendingRef.current = false;
     submitAnswer(draft.trim());
   };
 
@@ -515,6 +556,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
       return false;
     }
     endedRef.current = true;
+    autoSubmitPendingRef.current = false;
     continueListeningRef.current = false;
     window.clearTimeout(recognitionRestartRef.current);
     recognitionRef.current?.stop();
@@ -559,11 +601,22 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
         >
           {voiceEnabled ? "◖)) Voice on" : "Voice off"}
         </button>
+        <button
+          type="button"
+          className={`voice-output-toggle ${autoMode ? "enabled" : ""}`}
+          onClick={() => setAutoMode((enabled) => !enabled)}
+          aria-pressed={autoMode}
+          title="When on, Genie listens automatically after each question and sends your answer when you pause."
+        >
+          {autoMode ? "◉ Hands-free on" : "Hands-free off"}
+        </button>
       </header>
 
       {!started ? (
         <div className="live-interview-start">
-          <p>Genie asks a question, then transcribes your spoken answer here. Stop listening to review it, then select Send answer for feedback.</p>
+          <p>{autoMode
+            ? "Genie asks a question out loud, listens to your spoken answer, and replies automatically. Just talk — pause for a moment when you finish and Genie will respond."
+            : "Genie asks a question, then transcribes your spoken answer here. Stop listening to review it, then select Send answer for feedback."}</p>
           <button type="button" className="primary-button" onClick={startInterview} disabled={busy}>
             {busy ? "Starting interview…" : "Start live interview"}
           </button>
@@ -616,7 +669,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
             </form>
           )}
           <div className="live-interview-footer">
-            <span>{ended ? "Interview ended. See Chat for your report." : transcribing ? "Transcribing your recording… your answer will appear here shortly." : listening ? "Listening… your words appear in the answer box. Stop listening to review them." : answerCaptureComplete && !draft.trim() ? "Recording stopped without a transcript. Type your answer or try speaking again." : listeningDuration ? `Listening stopped at ${formatListeningDuration(listeningDuration)}. Review your answer, then send it for feedback.` : "Use Start speaking to dictate an answer, or type it in the answer box."}</span>
+            <span>{ended ? "Interview ended. See Chat for your report." : transcribing ? "Transcribing your recording… your answer will appear here shortly." : listening ? (autoMode ? "Listening… pause for a moment after you finish and Genie will respond automatically." : "Listening… your words appear in the answer box. Stop listening to review them.") : answerCaptureComplete && !draft.trim() ? "Recording stopped without a transcript. Type your answer or try speaking again." : listeningDuration ? `Listening stopped at ${formatListeningDuration(listeningDuration)}. Review your answer, then send it for feedback.` : autoMode ? "Genie is speaking or waiting — the microphone turns on automatically after each question." : "Use Start speaking to dictate an answer, or type it in the answer box."}</span>
             {started && <button type="button" onClick={() => onViewTranscript(history)}>View transcript</button>}
             {ended ? (
               <button type="button" onClick={startInterview} disabled={busy}>Start again</button>

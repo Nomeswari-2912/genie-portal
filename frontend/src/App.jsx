@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import GenieBot from "./components/GenieBot.jsx";
 import ResumeBuilder from "./components/ResumeBuilder.jsx";
 import MockInterview from "./components/MockInterview.jsx";
 import AttendanceReport from "./components/AttendanceReport.jsx";
-import AIGuardrails from "./components/AIGuardrails.jsx";
+import AIGuardrails, { SafetyWorkspace, safetyModules } from "./components/AIGuardrails.jsx";
 
 const tools = [
   { id: "genie", label: "Genie Bot", icon: "✦", note: "Your career copilot" },
@@ -21,12 +21,39 @@ const components = {
   guardrails: AIGuardrails,
 };
 
+const toolIds = ["workspace", ...tools.map((tool) => tool.id)];
+
+function readRoute() {
+  const [toolId, moduleId] = window.location.hash.replace(/^#\/?/, "").split("/");
+  return {
+    tool: toolIds.includes(toolId) ? toolId : "genie",
+    module: safetyModules.some((module) => module.id === moduleId) ? moduleId : "monitoring",
+  };
+}
+
 export default function App() {
-  const [activeTool, setActiveTool] = useState("genie");
+  const [activeTool, setActiveTool] = useState(() => readRoute().tool);
   const [helpOpen, setHelpOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [safetyModule, setSafetyModule] = useState(() => readRoute().module);
   const ActiveComponent = components[activeTool];
+  const activeSafetyModule = safetyModules.find((module) => module.id === safetyModule);
   const active = tools.find((tool) => tool.id === activeTool);
+
+  useEffect(() => {
+    const hash = activeTool === "guardrails" ? `#/guardrails/${safetyModule}` : `#/${activeTool}`;
+    if (window.location.hash !== hash) window.history[window.location.hash ? "pushState" : "replaceState"](null, "", hash);
+  }, [activeTool, safetyModule]);
+
+  useEffect(() => {
+    const syncRoute = () => {
+      const route = readRoute();
+      setActiveTool(route.tool);
+      setSafetyModule(route.module);
+    };
+    window.addEventListener("popstate", syncRoute);
+    return () => window.removeEventListener("popstate", syncRoute);
+  }, []);
 
   const openTool = (toolId) => {
     setActiveTool(toolId);
@@ -55,7 +82,8 @@ export default function App() {
                 {tool.id === "genie" ? <img className="genie-nav-mascot" src="/genie-mascot.png" alt="" /> :
                   tool.id === "resume" ? <img className="resume-nav-icon" src="/resume-builder-icon.png" alt="" /> :
                     tool.id === "interview" ? <img className="interview-nav-icon" src="/interview-nav-icon.jpe?v=1" alt="" /> :
-                      tool.id === "attendance" ? <img className="attendance-nav-icon" src="/attendance-report-icon.png?v=5" alt="" /> : tool.icon}
+                      tool.id === "attendance" ? <img className="attendance-nav-icon" src="/attendance-report-icon.png?v=5" alt="" /> :
+                        tool.id === "guardrails" ? <img className="guardrails-nav-icon" src="/ai-guardrails-icon.png?v=1" alt="" /> : tool.icon}
               </span>
               <span>{tool.label}</span>
               {activeTool === tool.id && <span className="nav-indicator" />}
@@ -94,7 +122,13 @@ export default function App() {
 
       <main className="main-area">
         <header className="topbar">
-          <div className="breadcrumb"><span>Workspace</span><span className="crumb-slash">/</span><strong>{active.label}</strong></div>
+          <nav className="breadcrumb" aria-label="Breadcrumb">
+            {activeTool === "workspace" ? <strong aria-current="page">Workspace</strong> : (
+              <button type="button" className="crumb-link" onClick={() => openTool("workspace")}>Workspace</button>
+            )}
+            {active && <><span className="crumb-slash">/</span><strong>{active.label}</strong></>}
+            {activeTool === "guardrails" && activeSafetyModule && <><span className="crumb-slash">/</span><strong>{activeSafetyModule.label}</strong></>}
+          </nav>
           <div className="topbar-right">
             <span className="help-link">Need a hand?</span>
             <button
@@ -114,7 +148,16 @@ export default function App() {
           )}
         </header>
         <section className={`page-content ${activeTool === "resume" ? "career-dashboard-content" : ""}`} key={activeTool}>
-          <ActiveComponent />
+          {activeTool === "workspace" ? (
+            <SafetyWorkspace
+              activeModule={safetyModule}
+              onOpenModule={(moduleId) => { setSafetyModule(moduleId); openTool("guardrails"); }}
+            />
+          ) : activeTool === "guardrails" ? (
+            <AIGuardrails activeModule={safetyModule} onOpenWorkspace={() => openTool("workspace")} />
+          ) : (
+            <ActiveComponent />
+          )}
         </section>
         <footer className="app-footer"><span>Made for your next chapter</span><span className="footer-sparkle">✦</span></footer>
       </main>
