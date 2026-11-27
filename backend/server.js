@@ -1,6 +1,6 @@
-import "dotenv/config";
 import { spawn } from "node:child_process";
 import { createServer as createHttpServer } from "node:http";
+import dotenv from "dotenv";
 import express from "express";
 import multer from "multer";
 import mammoth from "mammoth";
@@ -9,10 +9,14 @@ import { createServer as createViteServer } from "vite";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const backendDirectory = dirname(fileURLToPath(import.meta.url));
+const projectRoot = resolve(backendDirectory, "..");
+const frontendDirectory = resolve(projectRoot, "frontend");
+const distDirectory = resolve(frontendDirectory, "dist");
+dotenv.config({ path: resolve(projectRoot, ".env") });
+
 const app = express();
 const httpServer = createHttpServer(app);
-const projectRoot = dirname(fileURLToPath(import.meta.url));
-const distDirectory = resolve(projectRoot, "dist");
 const geminiRequestTimeoutMs = 20 * 1000;
 const geminiModels = ["gemini-3.5-flash-lite", "gemini-3.6-flash"];
 const upload = multer({
@@ -644,6 +648,7 @@ if (process.env.NODE_ENV === "production") {
   app.get("*", (_request, response) => response.sendFile("index.html", { root: distDirectory }));
 } else {
   const vite = await createViteServer({
+    root: frontendDirectory,
     server: {
       port,
       middlewareMode: { server: httpServer },
