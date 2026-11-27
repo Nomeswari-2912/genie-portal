@@ -532,6 +532,7 @@ button { cursor: pointer; }
 .remove-image-button:disabled, .upload-only-entry .upload-button:disabled { cursor: not-allowed; opacity: .48; }
 .answer-placeholder { min-height: 113px; display: flex; justify-content: center; align-items: center; gap: 9px; padding: 16px; border: 1px dashed #e8e4ef; border-radius: 8px; color: #9995a6; background: #fcfbfe; }
 .answer-placeholder > span:not(.answer-spinner) { color: #9278d4; font-size: 17px; }
+.answer-genie-icon { width: 40px; height: 40px; flex: 0 0 40px; object-fit: contain; }
 .answer-placeholder p { max-width: 350px; margin: 0; font-size: 9px; line-height: 1.7; }
 .loading-answer { border-style: solid; border-color: #eeeaf5; background: #fbfaff; }
 .answer-spinner { width: 17px; height: 17px; flex: 0 0 17px; border: 2px solid #e6e1f1; border-top-color: #7658d5; border-radius: 50%; animation: answer-spin .7s linear infinite; }

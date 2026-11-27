@@ -305,7 +305,7 @@ export default function DoubtClarification() {
             )}
             {status === "error" && <div className="answer-notice" role="alert"><span>!</span><p>{errorMessage}</p></div>}
             {messages.length === 0 && status !== "loading" && status !== "error" && (
-              <div className="answer-placeholder"><span>✦</span><p>Genie's answer will appear here after you ask a question or upload a screenshot.</p></div>
+              <div className="answer-placeholder"><img className="answer-genie-icon" src="/genie-mascot.png" alt="" /><p>Genie's answer will appear here after you ask a question or upload a screenshot.</p></div>
             )}
 
             {status === "answered" && (
