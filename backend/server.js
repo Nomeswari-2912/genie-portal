@@ -30,6 +30,18 @@ const upload = multer({
     callback(new Error("Upload a PNG, JPG, WEBP, or GIF screenshot."));
   },
 });
+const interviewAudioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 1, fields: 1 },
+  fileFilter: (_request, file, callback) => {
+    const mimeType = file.mimetype.split(";")[0].toLowerCase();
+    if (["audio/webm", "audio/ogg", "audio/mp4", "audio/wav", "audio/mpeg"].includes(mimeType)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Record your answer in a supported audio format and try again."));
+  },
+});
 
 async function requestGeminiContent(payload) {
   for (const [index, model] of geminiModels.entries()) {
@@ -352,6 +364,86 @@ app.post("/api/ats-score", (request, response, next) => {
       error: error instanceof Error ? error.message : "Could not calculate the ATS score.",
     });
   }
+});
+
+app.post("/api/transcribe-interview-audio", (request, response, next) => {
+  if (!process.env.GEMINI_API_KEY) {
+    response.status(503).json({ error: "Voice transcription is not configured. Add GEMINI_API_KEY to your local .env file and restart the app." });
+    return;
+  }
+  interviewAudioUpload.single("audio")(request, response, (error) => {
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+      response.status(413).json({ error: "That recording is too large to transcribe. Record a shorter answer and try again." });
+      return;
+    }
+    if (error) {
+      response.status(400).json({ error: error.message || "The recorded answer could not be uploaded." });
+      return;
+    }
+    next();
+  });
+}, async (request, response) => {
+  if (!request.file?.buffer.length) {
+    response.status(400).json({ error: "No recorded audio was received. Try speaking again or type your answer." });
+    return;
+  }
+
+  let upstream;
+  try {
+    upstream = await requestGeminiContent({
+      contents: [{
+        parts: [
+          {
+            text: "Transcribe the spoken interview answer verbatim in the language spoken. Return only the transcript, without labels, explanations, or markdown. If there is no intelligible speech, return an empty response.",
+          },
+          {
+            inline_data: {
+              mime_type: request.file.mimetype.split(";")[0].toLowerCase(),
+              data: request.file.buffer.toString("base64"),
+            },
+          },
+        ],
+      }],
+      generationConfig: { temperature: 0, maxOutputTokens: 1200 },
+    });
+  } catch (error) {
+    console.error("Could not reach Gemini to transcribe the interview answer.", error);
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
+    response.status(timedOut ? 504 : 502).json({
+      error: timedOut
+        ? "Transcribing the recording took too long. Try a shorter answer or type it instead."
+        : "Could not transcribe the recording. Check the server connection and try again.",
+    });
+    return;
+  }
+
+  let result;
+  try {
+    result = await upstream.json();
+  } catch (error) {
+    console.error("Gemini returned an unreadable audio transcription response.", error);
+    response.status(502).json({ error: "The transcription service returned an unreadable response. Please try again." });
+    return;
+  }
+
+  if (!upstream.ok) {
+    console.error("Gemini rejected the interview audio.", result?.error?.message || upstream.status);
+    response.status(upstream.status === 429 || upstream.status === 503 ? 503 : 502).json({
+      error: "The transcription service could not process this recording. Try again or type your answer.",
+    });
+    return;
+  }
+
+  const transcript = result?.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || "")
+    .join(" ")
+    .trim();
+  if (!transcript) {
+    response.status(422).json({ error: "No speech could be transcribed. Try speaking again or type your answer." });
+    return;
+  }
+
+  response.json({ transcript: transcript.slice(0, 1600) });
 });
 
 app.post("/api/interview-turn", (request, response, next) => {
