@@ -4,8 +4,8 @@ import CareerDashboard from "./CareerDashboard.jsx";
 const initialResume = {
   name: "Vaka Nomeswari",
   role: "Product Designer",
-  email: "alex.morgan@email.com",
-  location: "San Francisco, CA",
+  email: "",
+  location: "",
   summary: "Curious product designer with 4+ years of experience turning complex problems into simple, thoughtful digital experiences.",
   skills: "Product strategy, UX research, Figma, Prototyping, Design systems",
   experience: "",
