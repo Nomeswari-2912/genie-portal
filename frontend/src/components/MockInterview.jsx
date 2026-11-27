@@ -1,12 +1,28 @@
 import React, { useCallback, useRef, useState } from "react";
 import MockInterviewPractice from "./MockInterviewPractice.jsx";
-import LiveInterview from "./LiveInterview.jsx";
+import LiveInterview, { interviewRoleOptions } from "./LiveInterview.jsx";
+import CodingPractice from "./CodingPractice.jsx";
+import AnswerSuggestions from "./AnswerSuggestions.jsx";
+import PracticePlan from "./PracticePlan.jsx";
+import InterviewWorkspace, { interviewModules } from "./InterviewWorkspace.jsx";
+import InterviewHistory, { loadInterviewHistory, saveInterviewHistory } from "./InterviewHistory.jsx";
 
 const workmap = [
   { label: "Presentation", color: "violet" },
   { label: "Opportunistic", color: "orange" },
   { label: "Business Acumen", color: "violet" },
   { label: "Closing Technique", color: "red" },
+];
+
+const qualityDimensions = [
+  "Correctness",
+  "Relevance",
+  "Technical Knowledge",
+  "Communication Clarity",
+  "Grammar and Vocabulary",
+  "Problem Solving",
+  "Professionalism",
+  "Completeness",
 ];
 
 const radarAxes = [
@@ -88,11 +104,26 @@ function analyzeAnswers(answers, evaluations) {
   const finalVideo = combineScores("video", video);
   const finalWorkmap = combineScores("workmap", workmapScores);
 
+  const quality = {};
+  qualityDimensions.forEach((category) => {
+    const values = evaluations
+      .map((evaluation) => evaluation.scores?.quality?.[category])
+      .filter((value) => Number.isFinite(value));
+    quality[category] = values.length
+      ? clampScore(values.reduce((sum, value) => sum + value, 0) / values.length)
+      : null;
+  });
+  const qualityValues = Object.values(quality).filter((value) => value !== null);
+
   return {
     video: finalVideo,
     workmap: finalWorkmap,
+    quality,
     videoAverage: clampScore(Object.values(finalVideo).reduce((sum, score) => sum + score, 0) / Object.keys(finalVideo).length),
     workmapAverage: clampScore(Object.values(finalWorkmap).reduce((sum, score) => sum + score, 0) / Object.keys(finalWorkmap).length),
+    qualityAverage: qualityValues.length
+      ? clampScore(qualityValues.reduce((sum, score) => sum + score, 0) / qualityValues.length)
+      : null,
   };
 }
 
@@ -104,7 +135,7 @@ function radarPoints(scores) {
 }
 
 export default function MockInterview() {
-  const [view, setView] = useState("session");
+  const [view, setView] = useState("workspace");
   const [selectedRole, setSelectedRole] = useState("UI/UX Designer");
   const [chatTab, setChatTab] = useState("chat");
   const [messages, setMessages] = useState([]);
@@ -123,6 +154,8 @@ export default function MockInterview() {
   const liveInterviewControls = useRef(null);
   const [candidateAnswers, setCandidateAnswers] = useState([]);
   const [candidateEvaluations, setCandidateEvaluations] = useState([]);
+  const [liveTurns, setLiveTurns] = useState([]);
+  const [transcriptQuery, setTranscriptQuery] = useState("");
   const interviewScores = analyzeAnswers(candidateAnswers, candidateEvaluations);
   const recordCandidateAnswer = useCallback((answer, index) => {
     setCandidateAnswers((current) => {
@@ -143,7 +176,7 @@ export default function MockInterview() {
     setCandidateEvaluations([]);
   }, []);
 
-  const completeInterview = (turns) => {
+  const completeInterview = async (turns, meta = {}) => {
     const evaluations = turns
       .filter((turn) => turn.speaker === "candidate" && turn.evaluation)
       .map((turn) => turn.evaluation);
@@ -158,36 +191,168 @@ export default function MockInterview() {
       return;
     }
 
-    const groupAverages = (group) => Object.keys(evaluations[0].scores[group]).map((category) => {
-      const score = clampScore(evaluations.reduce((sum, evaluation) => sum + evaluation.scores[group][category], 0) / evaluations.length);
-      return `${category}: ${score}%`;
+    const scoreMean = (group, category) => {
+      const values = evaluations
+        .map((evaluation) => evaluation.scores?.[group]?.[category])
+        .filter((value) => Number.isFinite(value));
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    };
+    const groupMean = (group) => {
+      const values = evaluations
+        .flatMap((evaluation) => Object.values(evaluation.scores?.[group] || {}))
+        .filter((value) => Number.isFinite(value));
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    };
+    const meanLine = (value) => (value === null ? "not scored" : `${Math.round(value)}%`);
+
+    const videoScore = groupMean("video");
+    const workmapScore = groupMean("workmap");
+    const technicalScore = scoreMean("quality", "Technical Knowledge");
+    const communicationScore = scoreMean("quality", "Communication Clarity");
+
+    const weakestAreas = [
+      ...qualityDimensions.map((name) => ({ name, score: scoreMean("quality", name) })),
+      ...workmap.map((item) => ({ name: item.label, score: scoreMean("workmap", item.label) })),
+      ...radarAxes.map(({ label }) => ({ name: label, score: scoreMean("video", label) })),
+    ].filter((entry) => entry.score !== null)
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 4);
+    const weaknesses = weakestAreas.map((entry) => `${entry.name} (${Math.round(entry.score)}%)`);
+
+    const questionWise = [];
+    turns.forEach((turn, index) => {
+      if (turn.speaker !== "candidate" || !turn.evaluation) return;
+      const question = [...turns.slice(0, index)].reverse()
+        .find((item) => item.speaker === "interviewer")?.text || "Question unavailable";
+      questionWise.push([
+        `Q${questionWise.length + 1}: ${question}`,
+        `Assessment: ${assessmentLabels[turn.evaluation.assessment]}`,
+        `Genie feedback: ${turn.evaluation.feedback}`,
+      ].join("\n   "));
     });
+
+    const groupAverages = (group) => {
+      const categories = evaluations[0].scores[group] ? Object.keys(evaluations[0].scores[group]) : [];
+      if (!categories.length) return ["not enough scored data"];
+      return categories.map((category) => {
+        const score = clampScore(evaluations.reduce((sum, evaluation) => sum + (evaluation.scores[group]?.[category] ?? 0), 0) / evaluations.length);
+        return `${category}: ${score}%`;
+      });
+    };
     const assessmentCounts = evaluations.reduce((counts, evaluation) => {
       counts[evaluation.assessment] += 1;
       return counts;
     }, { correct: 0, partially_correct: 0, incorrect: 0, subjective: 0 });
-    const answerReviews = turns
-      .filter((turn) => turn.speaker === "candidate" && turn.evaluation)
-      .map((turn, index) => `Answer ${index + 1} — ${assessmentLabels[turn.evaluation.assessment]}: ${turn.evaluation.feedback}`)
-      .join("\n");
     const strengths = [...new Set(evaluations.flatMap((evaluation) => evaluation.strengths))].slice(0, 4);
     const improvements = [...new Set(evaluations.flatMap((evaluation) => evaluation.improvements))].slice(0, 4);
-    const overall = clampScore(evaluations.reduce((sum, evaluation) => {
-      const scores = [...Object.values(evaluation.scores.video), ...Object.values(evaluation.scores.workmap)];
+    const overallRaw = clampScore(evaluations.reduce((sum, evaluation) => {
+      const scores = [
+        ...Object.values(evaluation.scores.video),
+        ...Object.values(evaluation.scores.workmap),
+        ...Object.values(evaluation.scores.quality || {}),
+      ];
       return sum + scores.reduce((total, score) => total + score, 0) / scores.length;
     }, 0) / evaluations.length);
+    const hintsUsed = Number.isInteger(meta.hintsUsed) && meta.hintsUsed > 0 ? meta.hintsUsed : 0;
+    const hintPenalty = Math.min(10, hintsUsed * 2);
+    const overall = clampScore(overallRaw - hintPenalty);
+
+    let practiceQuestions = [];
+    try {
+      const practiceResponse = await fetch("/api/interview-practice-questions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          role: selectedRole,
+          company: typeof meta.company === "string" ? meta.company.trim().slice(0, 80) : "",
+          weaknesses: weakestAreas.map((entry) => entry.name),
+        }),
+      });
+      const practiceResult = await practiceResponse.json().catch(() => null);
+      if (practiceResponse.ok && Array.isArray(practiceResult?.questions)) {
+        practiceQuestions = practiceResult.questions
+          .filter((item) => typeof item === "string" && item.trim())
+          .slice(0, 5);
+      }
+    } catch (practiceError) {
+      console.error("Could not generate recommended practice questions.", practiceError);
+    }
+
     const report = [
-      "Interview performance report",
+      meta.company ? `Company-oriented interview · ${meta.company}` : "Interview performance report",
       `Overall performance: ${overall}/100`,
+      hintsUsed ? `Hints used: ${hintsUsed} (−${hintPenalty} pts applied to overall score)` : "Hints used: 0",
+      `AI Video Score: ${meanLine(videoScore)} · Workmap Score: ${meanLine(workmapScore)} · Technical Knowledge: ${meanLine(technicalScore)} · Communication: ${meanLine(communicationScore)}`,
       `Answers reviewed: ${evaluations.length}`,
       `Answer assessment: ${assessmentCounts.correct} correct · ${assessmentCounts.partially_correct} partially correct · ${assessmentCounts.incorrect} incorrect · ${assessmentCounts.subjective} open-ended`,
-      `Answer-by-answer feedback:\n${answerReviews}`,
+      `Question-wise evaluation:\n${questionWise.join("\n\n")}`,
       `Workmap: ${groupAverages("workmap").join(" · ")}`,
       `Communication indicators: ${groupAverages("video").join(" · ")}`,
+      `Answer quality: ${groupAverages("quality").join(" · ")}`,
+      (() => {
+        const speechEntries = turns.filter((turn) => turn.speaker === "candidate" && turn.speech);
+        if (!speechEntries.length) return "";
+        const avgOf = (key) => {
+          const values = speechEntries.map((turn) => turn.speech[key]).filter((value) => Number.isFinite(value));
+          return values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : null;
+        };
+        const totalFillers = speechEntries.reduce((sum, turn) => sum + (turn.speech.fillerWords || 0), 0);
+        const totalPauses = speechEntries.reduce((sum, turn) => sum + (turn.speech.longPauses || 0), 0);
+        const parts = [
+          avgOf("wpm") !== null ? `avg ${avgOf("wpm")} WPM` : "",
+          `${totalFillers} filler word${totalFillers === 1 ? "" : "s"}`,
+          `${totalPauses} long pause${totalPauses === 1 ? "" : "s"}`,
+          avgOf("clarity") !== null ? `clarity ${avgOf("clarity")}%` : "",
+          avgOf("score") !== null ? `speech score ${avgOf("score")}/100` : "",
+        ].filter(Boolean);
+        return `Speech analysis (${speechEntries.length} spoken answer${speechEntries.length === 1 ? "" : "s"}): ${parts.join(" · ")}`;
+      })(),
       strengths.length ? `Strengths: ${strengths.join("; ")}` : "",
+      weaknesses.length ? `Weaknesses: ${weaknesses.join("; ")}` : "",
       improvements.length ? `Areas to improve: ${improvements.join("; ")}` : "",
+      practiceQuestions.length
+        ? `Recommended practice questions:\n${practiceQuestions.map((question, index) => `${index + 1}. ${question}`).join("\n")}`
+        : "",
       "Scores and feedback are based on transcript evidence only; camera behavior is not analyzed.",
     ].filter(Boolean).join("\n\n");
+
+    const firstTurnAt = turns.find((turn) => turn.at)?.at;
+    const lastTurnAt = [...turns].reverse().find((turn) => turn.at)?.at;
+    const durationSeconds = Number.isFinite(meta.elapsedSeconds)
+      ? meta.elapsedSeconds
+      : (firstTurnAt && lastTurnAt ? Math.max(0, Math.round((lastTurnAt - firstTurnAt) / 1000)) : null);
+    const performance = overall >= 65 ? "Improved" : "Needs improvement";
+    const roundScore = (value) => (value === null ? null : Math.round(value));
+    const dimensionScores = {};
+    for (const group of ["quality", "workmap", "video"]) {
+      const categories = evaluations[0]?.scores?.[group] ? Object.keys(evaluations[0].scores[group]) : [];
+      const averages = {};
+      for (const category of categories) {
+        const value = scoreMean(group, category);
+        if (value !== null) averages[category] = Math.round(value);
+      }
+      if (Object.keys(averages).length) dimensionScores[group] = averages;
+    }
+    saveInterviewHistory([{
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      date: new Date().toISOString(),
+      role: selectedRole,
+      company: typeof meta.company === "string" ? meta.company.trim().slice(0, 80) : "",
+      hintsUsed,
+      type: meta.type || "Technical",
+      mode: meta.mode || "",
+      durationSeconds,
+      questions: evaluations.length,
+      overall,
+      videoScore: roundScore(videoScore),
+      workmapScore: roundScore(workmapScore),
+      technicalScore: roundScore(technicalScore),
+      communicationScore: roundScore(communicationScore),
+      dimensionScores,
+      performance,
+      report,
+    }, ...loadInterviewHistory()]);
+
     setMessages((current) => [...current, {
       author: "Genie AI Interview Report",
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -200,6 +365,8 @@ export default function MockInterview() {
   const changeRole = (event) => {
     setSelectedRole(event.target.value);
     resetInterviewScores();
+    setLiveTurns([]);
+    setTranscriptQuery("");
   };
 
   const sendMessage = async (event) => {
@@ -257,6 +424,36 @@ export default function MockInterview() {
     }
   };
 
+  const formatTurnTime = (turn) => (
+    turn.at ? new Date(turn.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "—"
+  );
+
+  const transcriptTurns = liveTurns.filter((turn) => (
+    !transcriptQuery.trim() || turn.text.toLowerCase().includes(transcriptQuery.trim().toLowerCase())
+  ));
+
+  const downloadTranscript = () => {
+    if (!liveTurns.length) return;
+    const lines = [
+      "Genie AI Mock Interview — Transcript",
+      `Role: ${selectedRole}`,
+      `Exported: ${new Date().toLocaleString()}`,
+      "",
+      ...liveTurns.map((turn) => [
+        `[${formatTurnTime(turn)}] ${turn.speaker === "interviewer" ? "Genie AI" : "You"}: ${turn.text}`,
+        turn.evaluation?.assessment ? `  Assessment: ${assessmentLabels[turn.evaluation.assessment]}` : "",
+        turn.evaluation?.feedback ? `  Genie feedback: ${turn.evaluation.feedback}` : "",
+      ].filter(Boolean).join("\n")),
+    ];
+    const blob = new Blob([lines.join("\n\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `mock-interview-transcript-${selectedRole.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const addPerson = (event) => {
     event.preventDefault();
     const name = personDraft.trim();
@@ -297,23 +494,113 @@ export default function MockInterview() {
     setMicOn(false);
   };
 
+  const handleOpenModule = (moduleId) => {
+    const mapping = {
+      session: "session",
+      resume: "session",
+      company: "company",
+      coding: "coding",
+      speech: "session",
+      hints: "session",
+      suggestions: "session",
+      adaptive: "session",
+      replay: "history",
+      language: "session",
+      plan: "plan",
+    };
+    setView(mapping[moduleId] || "session");
+  };
+
+
+  if (view === "workspace") {
+    return (
+      <div className="interview-workspace">
+        <InterviewWorkspace onOpenModule={handleOpenModule} />
+      </div>
+    );
+  }
+
   if (view === "practice") {
     return (
       <div className="interview-workspace">
         <nav className="interview-view-switch" aria-label="Interview views">
+          <button onClick={() => setView("workspace")}>← Back to workspace</button>
           <button onClick={() => setView("session")}>Interview Session</button>
           <button className="active" aria-current="page" onClick={() => setView("practice")}>Practice Questions</button>
+          <button onClick={() => setView("company")}>Company Interview</button>
+          <button onClick={() => setView("coding")}>Coding</button>
+          <button onClick={() => setView("plan")}>Practice Plan</button>
+          <button onClick={() => setView("history")}>History</button>
         </nav>
         <MockInterviewPractice />
       </div>
     );
   }
 
+  if (view === "history") {
+    return (
+      <div className="interview-workspace">
+        <nav className="interview-view-switch" aria-label="Interview views">
+          <button onClick={() => setView("workspace")}>← Back to workspace</button>
+          <button onClick={() => setView("session")}>Interview Session</button>
+          <button onClick={() => setView("practice")}>Practice Questions</button>
+          <button onClick={() => setView("company")}>Company Interview</button>
+          <button onClick={() => setView("coding")}>Coding</button>
+          <button onClick={() => setView("plan")}>Practice Plan</button>
+          <button className="active" aria-current="page" onClick={() => setView("history")}>History</button>
+        </nav>
+        <InterviewHistory />
+
+      </div>
+    );
+  }
+
+  if (view === "coding") {
+    return (
+      <div className="interview-workspace">
+        <nav className="interview-view-switch" aria-label="Interview views">
+          <button onClick={() => setView("workspace")}>← Back to workspace</button>
+          <button onClick={() => setView("session")}>Interview Session</button>
+          <button onClick={() => setView("practice")}>Practice Questions</button>
+          <button onClick={() => setView("company")}>Company Interview</button>
+          <button className="active" aria-current="page" onClick={() => setView("coding")}>Coding</button>
+          <button onClick={() => setView("plan")}>Practice Plan</button>
+          <button onClick={() => setView("history")}>History</button>
+        </nav>
+        <CodingPractice />
+      </div>
+    );
+  }
+
+  if (view === "plan") {
+    return (
+      <div className="interview-workspace">
+        <nav className="interview-view-switch" aria-label="Interview views">
+          <button onClick={() => setView("workspace")}>← Back to workspace</button>
+          <button onClick={() => setView("session")}>Interview Session</button>
+          <button onClick={() => setView("practice")}>Practice Questions</button>
+          <button onClick={() => setView("company")}>Company Interview</button>
+          <button onClick={() => setView("coding")}>Coding</button>
+          <button className="active" aria-current="page" onClick={() => setView("plan")}>Practice Plan</button>
+          <button onClick={() => setView("history")}>History</button>
+        </nav>
+        <PracticePlan onOpenSession={() => setView("session")} />
+      </div>
+    );
+  }
+
+  const companyMode = view === "company";
+
   return (
     <div className="interview-workspace">
       <nav className="interview-view-switch" aria-label="Interview views">
-        <button className="active" aria-current="page" onClick={() => setView("session")}>Interview Session</button>
+        <button onClick={() => setView("workspace")}>← Back to workspace</button>
+        <button className={companyMode ? "" : "active"} aria-current={companyMode ? undefined : "page"} onClick={() => setView("session")}>Interview Session</button>
         <button onClick={() => setView("practice")}>Practice Questions</button>
+        <button className={companyMode ? "active" : ""} aria-current={companyMode ? "page" : undefined} onClick={() => setView("company")}>Company Interview</button>
+        <button onClick={() => setView("coding")}>Coding</button>
+        <button onClick={() => setView("plan")}>Practice Plan</button>
+        <button onClick={() => setView("history")}>History</button>
       </nav>
 
       <div className="session-page">
@@ -321,15 +608,11 @@ export default function MockInterview() {
           <div className="session-title-group">
             <span className="session-brand-mark">H</span>
             <div className="session-heading-copy">
-              <span className="section-kicker">AI MOCK INTERVIEW</span>
+              <span className="section-kicker">{companyMode ? "COMPANY-SPECIFIC INTERVIEW" : "AI MOCK INTERVIEW"}</span>
               <label className="session-role-label">
                 <span className="sr-only">Interview role</span>
                 <select value={selectedRole} onChange={changeRole} aria-label="Interview role">
-                  <option>UI/UX Designer</option>
-                  <option>Product Designer</option>
-                  <option>Software Engineer</option>
-                  <option>Data Analyst</option>
-                  <option>Marketing Manager</option>
+                  {interviewRoleOptions.map((role) => <option key={role} value={role}>{role}</option>)}
                 </select>
               </label>
             </div>
@@ -385,7 +668,10 @@ export default function MockInterview() {
                   <div className="call-controls" aria-label="Call controls">
                     <button className={micOn ? "" : "control-muted"} aria-label={micOn ? "Stop listening" : "Start speaking"} onClick={() => liveInterviewControls.current?.toggleListening()}><span>{micOn ? "♩" : "♩̸"}</span></button>
                     <button className="control-end-call" aria-label="End call" onClick={endCall}><span>☎</span></button>
-                    <button className={cameraOn ? "" : "control-muted"} aria-label={cameraOn ? "Turn camera off" : "Turn camera on"} onClick={() => setCameraOn((current) => !current)}><span>▣</span></button>
+                    <button className={cameraOn ? "" : "control-muted"} aria-label={cameraOn ? "Turn camera off" : "Turn camera on"} onClick={() => {
+                      if (liveInterviewControls.current?.toggleCamera) liveInterviewControls.current.toggleCamera();
+                      else setCameraOn((current) => !current);
+                    }}><span>▣</span></button>
                     <button className={recording ? "control-recording" : ""} aria-label={recording ? "Stop recording" : "Start recording"} onClick={() => setRecording((current) => !current)}><span>◉</span></button>
                   </div>
                 </>
@@ -397,6 +683,7 @@ export default function MockInterview() {
             <LiveInterview
               key={selectedRole}
               role={selectedRole}
+              onRoleChange={changeRole}
               onSpeakingChange={setInterviewerSpeaking}
               onListeningChange={setMicOn}
               onCandidateAnswer={recordCandidateAnswer}
@@ -404,7 +691,10 @@ export default function MockInterview() {
               onInterviewStart={resetInterviewScores}
               onInterviewComplete={completeInterview}
               onViewTranscript={viewTranscript}
+              onCameraChange={setCameraOn}
+              onHistoryChange={setLiveTurns}
               controlsRef={liveInterviewControls}
+              companyMode={companyMode}
             />
 
             <div className="feedback-grid">
@@ -436,6 +726,15 @@ export default function MockInterview() {
                   })}
                 </div>
               </section>
+              <section className="feedback-card quality-card">
+                <div className="feedback-card-heading"><div><h2>Answer Quality</h2><p>{interviewScores?.qualityAverage !== null && interviewScores?.qualityAverage !== undefined ? "Per-answer rubric · technical and communication scored separately" : "Scores update as Genie evaluates each answer"}</p></div></div>
+                <div className="workmap-score-list">
+                  {qualityDimensions.map((label) => {
+                    const score = interviewScores?.quality?.[label];
+                    return <div className="workmap-row" key={label}><div><span>{label}</span><strong>{score === null || score === undefined ? "—" : `${score}%`}</strong></div><div className="workmap-track"><i className="violet" style={{ width: `${score ?? 0}%` }} /></div></div>;
+                  })}
+                </div>
+              </section>
             </div>
           </main>
 
@@ -450,9 +749,68 @@ export default function MockInterview() {
             <section className="session-chat-card">
               <div className="chat-tabs" role="tablist" aria-label="Interview side panel">
                 <button role="tab" aria-selected={chatTab === "chat"} className={chatTab === "chat" ? "selected" : ""} onClick={() => setChatTab("chat")}>Chat <span>{messages.length}</span></button>
+                <button role="tab" aria-selected={chatTab === "transcript"} className={chatTab === "transcript" ? "selected" : ""} onClick={() => setChatTab("transcript")}>Transcript <span>{liveTurns.length}</span></button>
                 <button role="tab" aria-selected={chatTab === "participants"} className={chatTab === "participants" ? "selected" : ""} onClick={() => setChatTab("participants")}>Participants</button>
               </div>
-              {chatTab === "chat" ? (
+              {chatTab === "transcript" ? (
+                <div className="transcript-panel" role="tabpanel">
+                  <div className="transcript-toolbar">
+                    <input
+                      value={transcriptQuery}
+                      onChange={(event) => setTranscriptQuery(event.target.value)}
+                      placeholder="Search transcript…"
+                      aria-label="Search transcript"
+                    />
+                    <button type="button" onClick={downloadTranscript} disabled={!liveTurns.length}>Download</button>
+                  </div>
+                  {!liveTurns.length ? (
+                    <p className="session-chat-empty">Start the live interview — Genie’s questions and your spoken answers will appear here with timestamps.</p>
+                  ) : !transcriptTurns.length ? (
+                    <p className="session-chat-empty">No transcript lines match “{transcriptQuery}”.</p>
+                  ) : (
+                    <div className="transcript-list">
+                      {transcriptTurns.map((turn, index) => (
+                        <article className={`transcript-turn ${turn.speaker}`} key={`${turn.at ?? index}-${index}`}>
+                          <div className="transcript-turn-meta">
+                            <strong>{turn.speaker === "interviewer" ? "Genie AI" : "You"}</strong>
+                            <time>{formatTurnTime(turn)}</time>
+                          </div>
+                          <p>{turn.text}</p>
+                          {turn.evaluation && (
+                            <small className="transcript-turn-evaluation">
+                              <strong>{assessmentLabels[turn.evaluation.assessment] || "Evaluated"}:</strong> {turn.evaluation.feedback}
+                            </small>
+                          )}
+                          {turn.speaker === "candidate" && (() => {
+                            const sourceIndex = liveTurns.indexOf(turn);
+                            const question = sourceIndex > 0
+                              ? [...liveTurns.slice(0, sourceIndex)].reverse().find((item) => item.speaker === "interviewer")?.text
+                              : undefined;
+                            return (
+                              <AnswerSuggestions
+                                question={question}
+                                answer={turn.text}
+                                role={selectedRole}
+                                evaluation={turn.evaluation}
+                              />
+                            );
+                          })()}
+                          {turn.speech && (
+                            <small className="speech-analysis-line">
+                              Speech: {turn.speech.wpm !== null ? `${turn.speech.wpm} WPM` : "—"}
+                              {" · "}{turn.speech.fillerWords} filler{turn.speech.fillerWords === 1 ? "" : "s"}
+                              {turn.speech.longPauses !== null ? ` · ${turn.speech.longPauses} long pause${turn.speech.longPauses === 1 ? "" : "s"}` : ""}
+                              {turn.speech.repeatedWords ? ` · ${turn.speech.repeatedWords} repeated` : ""}
+                              {turn.speech.clarity !== null ? ` · clarity ${turn.speech.clarity}%` : ""}
+                              {turn.speech.score !== null ? ` · score ${turn.speech.score}/100` : ""}
+                            </small>
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : chatTab === "chat" ? (
                 <>
                   <div className="chat-message-list" aria-live="polite">
                     {!messages.length && <p className="session-chat-empty">Chat with Genie or view your live interview transcript here.</p>}

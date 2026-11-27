@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
+import { analyzeAnswerSpeech } from "../speechAnalysis.js";
+import AnswerSuggestions from "./AnswerSuggestions.jsx";
 
 const assessmentLabels = {
   correct: "Correct",
@@ -13,6 +15,100 @@ const spokenAssessments = {
   subjective: "That was an open-ended answer with no single correct response.",
 };
 
+const speechLanguages = {
+  en: "en-US",
+  es: "es-ES",
+  fr: "fr-FR",
+  de: "de-DE",
+  ru: "ru-RU",
+  zh: "zh-CN",
+  hi: "hi-IN",
+  te: "te-IN",
+};
+
+const interviewLanguages = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Spanish" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "ru", name: "Russian" },
+  { code: "zh", name: "Chinese" },
+  { code: "hi", name: "Hindi" },
+  { code: "te", name: "Telugu" },
+];
+
+export const interviewRoleOptions = [
+  "UI/UX Designer",
+  "Product Designer",
+  "Software Engineer",
+  "Java Developer",
+  "Python Developer",
+  "Full Stack Developer",
+  "Frontend Developer",
+  "Backend Developer",
+  "DevOps Engineer",
+  "Data Analyst",
+  "Data Scientist",
+  "Marketing Manager",
+  "HR Executive",
+];
+const interviewTypeOptions = ["HR", "Technical", "Coding", "Behavioral", "Aptitude"];
+const companyRoundOptions = ["Aptitude", "Technical", "HR", "Coding"];
+const interviewCompanies = [
+  "Deloitte", "Accenture", "TCS", "Infosys", "Wipro", "HCLTech", "Tech Mahindra",
+  "Cognizant", "Capgemini", "IBM", "Oracle", "Google", "Microsoft", "Amazon", "Goldman Sachs",
+];
+const interviewDifficultyOptions = ["Easy", "Medium", "Hard"];
+const interviewDurationOptions = [15, 30, 45, 60];
+const interviewQuestionOptions = [5, 10, 15, 20];
+const interviewModeOptions = [
+  { value: "voice", label: "Voice" },
+  { value: "video", label: "Video" },
+  { value: "text", label: "Text" },
+];
+
+const defaultSetup = {
+  type: "Technical",
+  company: "",
+  difficulty: "Medium",
+  duration: 30,
+  questions: 10,
+  language: "en",
+  explanationLanguage: "",
+  mode: "voice",
+};
+
+function loadSavedSetup() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("genie-interview-setup") || "null");
+    if (!saved || typeof saved !== "object") return { ...defaultSetup };
+    return {
+      type: interviewTypeOptions.includes(saved.type) ? saved.type : defaultSetup.type,
+      company: typeof saved.company === "string" ? saved.company.trim().slice(0, 80) : defaultSetup.company,
+      difficulty: interviewDifficultyOptions.includes(saved.difficulty) ? saved.difficulty : defaultSetup.difficulty,
+      duration: interviewDurationOptions.includes(Number(saved.duration)) ? Number(saved.duration) : defaultSetup.duration,
+      questions: interviewQuestionOptions.includes(Number(saved.questions)) ? Number(saved.questions) : defaultSetup.questions,
+      language: speechLanguages[saved.language] ? saved.language : defaultSetup.language,
+      explanationLanguage: speechLanguages[saved.explanationLanguage] ? saved.explanationLanguage : defaultSetup.explanationLanguage,
+      mode: interviewModeOptions.some((item) => item.value === saved.mode) ? saved.mode : defaultSetup.mode,
+    };
+  } catch {
+    return { ...defaultSetup };
+  }
+}
+
+function loadSavedResumeUpload() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("genie-interview-resume") || "null");
+    if (saved && typeof saved.text === "string" && saved.text.trim() && typeof saved.name === "string") {
+      return { text: saved.text.slice(0, 6000), name: saved.name };
+    }
+  } catch {
+    // Ignore corrupt saved resume data.
+  }
+  return { text: "", name: "" };
+}
+
 function getSpeechRecognition() {
   return window.SpeechRecognition || window.webkitSpeechRecognition;
 }
@@ -23,7 +119,7 @@ function formatListeningDuration(seconds) {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
-export default function LiveInterview({ role, onSpeakingChange, onListeningChange, onCandidateAnswer, onCandidateEvaluation, onInterviewStart, onInterviewComplete, onViewTranscript, controlsRef }) {
+export default function LiveInterview({ role, onRoleChange, onSpeakingChange, onListeningChange, onCandidateAnswer, onCandidateEvaluation, onInterviewStart, onInterviewComplete, onViewTranscript, onCameraChange, onHistoryChange, controlsRef, companyMode = false, preparationMode = false }) {
   const [history, setHistory] = useState([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -35,6 +131,26 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   const [answerCaptureComplete, setAnswerCaptureComplete] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [autoMode, setAutoMode] = useState(true);
+  const [setup, setSetup] = useState(loadSavedSetup);
+  const [secondsLeft, setSecondsLeft] = useState(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [micMuted, setMicMuted] = useState(false);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [subtitle, setSubtitle] = useState("");
+  const [resumeUpload, setResumeUpload] = useState(loadSavedResumeUpload);
+  const [resumeBusy, setResumeBusy] = useState(false);
+  const [prepLinks, setPrepLinks] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("genie-resume-links") || "null");
+      return saved && typeof saved === "object" ? saved : { linkedin: "", github: "", portfolio: "", additionalInfo: "", jobDescription: "" };
+    } catch {
+      return { linkedin: "", github: "", portfolio: "", additionalInfo: "", jobDescription: "" };
+    }
+  });
+  const [hintFor, setHintFor] = useState("");
+  const [hintBusy, setHintBusy] = useState(false);
+  const [hintCount, setHintCount] = useState(0);
   const [error, setError] = useState("");
   const [resumeContext, setResumeContext] = useState("");
   const recognitionRef = useRef(null);
@@ -49,6 +165,16 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   const audioTranscriptionPendingRef = useRef(false);
   const networkRetryCountRef = useRef(0);
   const listeningStartedAtRef = useRef(null);
+  const lastListenSecondsRef = useRef(0);
+  const lastAnswerAudioRef = useRef(null);
+  const speechContextRef = useRef(null);
+  const speechAnalyserRef = useRef(null);
+  const speechRafRef = useRef(null);
+  const speechLevelRef = useRef(0);
+  const speechActiveMsRef = useRef(0);
+  const speechLastFrameRef = useRef(0);
+  const waveCanvasRef = useRef(null);
+  const [liveWpm, setLiveWpm] = useState(null);
   const startedRef = useRef(false);
   const endedRef = useRef(false);
   const autoSubmitPendingRef = useRef(false);
@@ -58,19 +184,80 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   const speechTokenRef = useRef(0);
   const reportSentRef = useRef(false);
   const candidateAnswerIndexRef = useRef(0);
+  const historyRef = useRef([]);
+  const endsAtRef = useRef(0);
+  const startedAtRef = useRef(0);
+  const pausedTotalRef = useRef(0);
+  const pausedAtRef = useRef(null);
+  const pausedRef = useRef(false);
+  const micMutedRef = useRef(false);
+  const resumeListeningRef = useRef(false);
+  const preserveTranscriptRef = useRef(false);
+  const skippedCountRef = useRef(0);
+  const cameraStreamRef = useRef(null);
+  const cameraVideoRef = useRef(null);
+  const resumeFileRef = useRef(null);
+  const subtitleFallbackRef = useRef(null);
   startedRef.current = started;
   endedRef.current = ended;
+  historyRef.current = history;
+  pausedRef.current = paused;
+  micMutedRef.current = micMuted;
   const updateListening = (active) => {
     if (active && listeningStartedAtRef.current === null) {
       listeningStartedAtRef.current = Date.now();
       setListeningDuration(0);
     } else if (!active && listeningStartedAtRef.current !== null) {
-      setListeningDuration(Math.floor((Date.now() - listeningStartedAtRef.current) / 1000));
+      const seconds = Math.floor((Date.now() - listeningStartedAtRef.current) / 1000);
+      setListeningDuration(seconds);
+      lastListenSecondsRef.current = seconds;
       listeningStartedAtRef.current = null;
     }
     setListening(active);
     onListeningChange(active);
   };
+  const updateSetup = (key, value) => {
+    setSetup((current) => ({ ...current, [key]: value }));
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("genie-interview-setup", JSON.stringify(setup));
+    } catch {
+      // Storage may be unavailable; the in-memory config still applies.
+    }
+  }, [setup]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("genie-interview-resume", JSON.stringify(resumeUpload));
+    } catch {
+      // Storage may be unavailable; the in-memory resume still applies.
+    }
+  }, [resumeUpload]);
+
+  const uploadResume = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setResumeBusy(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("resume", file);
+      const response = await fetch("/api/extract-resume", { method: "POST", body: formData });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || typeof result?.resume !== "string" || !result.resume.trim()) {
+        throw new Error(result?.error || "Could not read that resume. Try a PDF, DOCX, or TXT file.");
+      }
+      setResumeUpload({ text: result.resume.trim().slice(0, 6000), name: result.fileName || file.name });
+    } catch (uploadError) {
+      setError(uploadError.message || "Could not upload the resume. Check that GenieBot is running and try again.");
+    } finally {
+      setResumeBusy(false);
+    }
+  };
+
   const getRecognitionTranscript = () => [
     recognitionTranscriptRef.current,
     recognitionInterimRef.current,
@@ -109,8 +296,85 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
       setTranscribing(false);
     }
   };
+  const startSpeechMeter = (stream) => {
+    stopSpeechMeter();
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    const canvas = waveCanvasRef.current;
+    if (!AudioContextClass || !canvas) return;
+    try {
+      const context = new AudioContextClass();
+      const source = context.createMediaStreamSource(stream);
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      speechContextRef.current = context;
+      speechAnalyserRef.current = analyser;
+      speechActiveMsRef.current = 0;
+      speechLastFrameRef.current = performance.now();
+      const data = new Uint8Array(analyser.fftSize);
+      let lastWpmUpdate = 0;
+      const draw = () => {
+        speechRafRef.current = requestAnimationFrame(draw);
+        const now = performance.now();
+        const delta = now - speechLastFrameRef.current;
+        speechLastFrameRef.current = now;
+        analyser.getByteTimeDomainData(data);
+        let sum = 0;
+        for (let i = 0; i < data.length; i += 1) {
+          const value = (data[i] - 128) / 128;
+          sum += value * value;
+        }
+        const level = Math.sqrt(sum / data.length);
+        speechLevelRef.current = level;
+        if (level > 0.02) speechActiveMsRef.current += delta;
+
+        const target = waveCanvasRef.current;
+        if (target) {
+          const width = target.clientWidth || 300;
+          const height = target.clientHeight || 44;
+          if (target.width !== width || target.height !== height) {
+            target.width = width;
+            target.height = height;
+          }
+          const ctx2d = target.getContext("2d");
+          ctx2d.clearRect(0, 0, width, height);
+          ctx2d.fillStyle = "#654ac2";
+          const bars = 48;
+          const barWidth = width / bars;
+          for (let i = 0; i < bars; i += 1) {
+            const index = Math.floor((i / bars) * data.length);
+            const amplitude = Math.min(1, Math.abs(data[index] - 128) / 128 + level * 4);
+            const barHeight = Math.max(2, amplitude * height * 0.9);
+            ctx2d.fillRect(i * barWidth + 1, (height - barHeight) / 2, Math.max(1, barWidth - 2), barHeight);
+          }
+        }
+
+        if (now - lastWpmUpdate > 500) {
+          lastWpmUpdate = now;
+          const words = (getRecognitionTranscript().match(/\S+/g) || []).length;
+          const speechMinutes = speechActiveMsRef.current / 60000;
+          setLiveWpm(speechMinutes > 0.03 && words > 0 ? Math.round(words / speechMinutes) : null);
+        }
+      };
+      draw();
+    } catch (meterError) {
+      console.warn("Speech meter unavailable.", meterError);
+    }
+  };
+
+  const stopSpeechMeter = () => {
+    if (speechRafRef.current) cancelAnimationFrame(speechRafRef.current);
+    speechRafRef.current = null;
+    speechAnalyserRef.current = null;
+    speechContextRef.current?.close().catch(() => {});
+    speechContextRef.current = null;
+    speechLevelRef.current = 0;
+    setLiveWpm(null);
+  };
+
   const startAudioRecording = async () => {
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return false;
+    lastAnswerAudioRef.current = null;
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     if (!continueListeningRef.current) {
       stream.getTracks().forEach((track) => track.stop());
@@ -136,9 +400,11 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     };
     recorder.onstop = () => {
       stream.getTracks().forEach((track) => track.stop());
+      stopSpeechMeter();
       if (mediaRecorderRef.current === recorder) mediaRecorderRef.current = null;
       if (mediaStreamRef.current === stream) mediaStreamRef.current = null;
       const audioBlob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || "audio/webm" });
+      if (audioBlob.size) lastAnswerAudioRef.current = audioBlob;
       const transcript = getRecognitionTranscript();
       if (transcript) {
         setDraft((current) => current.trim() || transcript);
@@ -152,6 +418,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
       }
     };
     recorder.start(1000);
+    startSpeechMeter(stream);
     return true;
   };
   const stopAudioRecording = () => {
@@ -176,6 +443,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     mediaRecorderRef.current = null;
     mediaStreamRef.current = null;
     audioChunksRef.current = [];
+    stopSpeechMeter();
   };
 
   useEffect(() => {
@@ -194,25 +462,49 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     recognitionRef.current?.stop();
     discardAudioRecording();
     window.speechSynthesis?.cancel();
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    window.clearTimeout(subtitleFallbackRef.current);
+    stopSpeechMeter();
     onSpeakingChange(false);
     onListeningChange(false);
   }, [onListeningChange, onSpeakingChange]);
 
-  const speak = (text, onComplete) => {
+  const speak = (text, onComplete, lang) => {
     const token = ++speechTokenRef.current;
     const finish = () => {
       if (token !== speechTokenRef.current) return;
       speakingRef.current = false;
+      setSubtitle("");
+      window.clearTimeout(subtitleFallbackRef.current);
       onSpeakingChange(false);
       onComplete?.();
     };
-    if (!voiceEnabled || !window.speechSynthesis) {
+    setSubtitle("");
+    if (setup.mode === "text" || !voiceEnabled || !window.speechSynthesis) {
       finish();
       return;
     }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.onstart = () => onSpeakingChange(true);
+    const speakLang = lang || setup.language;
+    utterance.lang = speechLanguages[speakLang] || "en-US";
+    const voices = window.speechSynthesis.getVoices();
+    const voice = voices.find((item) => item.lang === utterance.lang) ||
+      voices.find((item) => item.lang?.toLowerCase().startsWith(speakLang));
+    if (voice) utterance.voice = voice;
+    utterance.onstart = () => {
+      onSpeakingChange(true);
+      window.clearTimeout(subtitleFallbackRef.current);
+      subtitleFallbackRef.current = window.setTimeout(() => {
+        setSubtitle((current) => current || text);
+      }, 1500);
+    };
+    utterance.onboundary = (event) => {
+      if (typeof event.charIndex === "number" && event.charIndex > 0) {
+        setSubtitle(text.slice(0, event.charIndex).trimEnd());
+      }
+    };
     utterance.onend = finish;
     utterance.onerror = finish;
     speakingRef.current = true;
@@ -256,13 +548,13 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
       .slice(0, 6000);
   };
 
-  const getInterviewerReply = async (turns, resumeDetails) => {
+  const getInterviewerReply = async (turns, resumeDetails, extra = {}) => {
     let response;
     try {
       response = await fetch("/api/interview-turn", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ role, history: turns, resume: resumeDetails }),
+        body: JSON.stringify({ role, history: turns, resume: resumeDetails, config: setup, ...extra }),
       });
     } catch (requestError) {
       console.error("Could not reach the live interview endpoint.", requestError);
@@ -301,15 +593,33 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     setTranscribing(false);
     reportSentRef.current = false;
     candidateAnswerIndexRef.current = 0;
+    skippedCountRef.current = 0;
+    endsAtRef.current = Date.now() + setup.duration * 60000;
+    startedAtRef.current = Date.now();
+    pausedTotalRef.current = 0;
+    pausedAtRef.current = null;
+    setSecondsLeft(setup.duration * 60);
+    setElapsed(0);
+    setPaused(false);
+    pausedRef.current = false;
+    setMicMuted(false);
+    micMutedRef.current = false;
+    setSubtitle("");
+    resumeListeningRef.current = false;
+    preserveTranscriptRef.current = false;
     onInterviewStart();
+    if (setup.mode === "video") void toggleCamera();
     try {
-      const resumeDetails = readResumeContext();
+      const resumeDetails = resumeUpload.text.trim() ? resumeUpload.text : readResumeContext();
       setResumeContext(resumeDetails);
       const result = await getInterviewerReply([], resumeDetails);
-      setHistory([{ speaker: "interviewer", text: result.reply.trim() }]);
+      const firstTurn = { speaker: "interviewer", text: result.reply.trim(), at: Date.now() };
+      setHistory([firstTurn]);
       setStarted(true);
       startedRef.current = true;
-      speak(result.reply.trim(), () => toggleListening(true));
+      speak(result.reply.trim(), () => {
+        if (!micMutedRef.current && !pausedRef.current) toggleListening(true);
+      });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -318,18 +628,34 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   };
 
   const submitAnswer = async (answer) => {
-    if (busy || ended || listening || transcribing) return;
+    if (busy || ended || paused || listening || transcribing) return;
     if (!answer.trim()) {
       setError("No answer transcript was captured. Type your answer or start speaking and try again.");
       return;
     }
     setBusy(true);
     setError("");
+    preserveTranscriptRef.current = false;
     try {
       const candidateTurnIndex = candidateAnswerIndexRef.current;
-      const candidateTurn = { speaker: "candidate", text: answer };
+      const candidateTurn = { speaker: "candidate", text: answer, at: Date.now() };
       const turns = [...history, candidateTurn];
-      const result = await getInterviewerReply(turns, resumeContext);
+      const speechPromise = setup.mode === "text"
+        ? Promise.resolve(null)
+        : analyzeAnswerSpeech({
+          audioBlob: lastAnswerAudioRef.current
+            || (audioChunksRef.current.length
+              ? new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || "audio/webm" })
+              : null),
+          transcript: answer,
+          listenSeconds: lastListenSecondsRef.current,
+        });
+      lastAnswerAudioRef.current = null;
+      const [result, speech] = await Promise.all([
+        getInterviewerReply(turns, resumeContext),
+        speechPromise,
+      ]);
+      if (speech && (speech.audioAnalyzed || speech.wordCount > 0)) candidateTurn.speech = speech;
       if (!result.evaluation?.scores ||
         typeof result.evaluation.feedback !== "string" ||
         !assessmentLabels[result.evaluation.assessment]) {
@@ -339,11 +665,27 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
       candidateAnswerIndexRef.current += 1;
       onCandidateAnswer(answer, candidateTurnIndex);
       onCandidateEvaluation(candidateTurnIndex, result.evaluation);
-      const nextHistory = [...turns, { speaker: "interviewer", text: result.reply.trim() }];
+      const nextHistory = [...turns, { speaker: "interviewer", text: result.reply.trim(), at: Date.now() }];
       setHistory(nextHistory);
       setDraft("");
       setAnswerCaptureComplete(false);
-      speak(`${spokenAssessments[result.evaluation.assessment]} ${result.evaluation.feedback} ${result.reply.trim()}`, () => toggleListening(true));
+      const answeredCount = nextHistory.filter((turn) => turn.speaker === "candidate").length;
+      const assessmentSpeech = setup.language === "en" ? `${spokenAssessments[result.evaluation.assessment]} ` : "";
+      const afterSpeech = () => {
+        if (answeredCount >= setup.questions || Date.now() >= endsAtRef.current) {
+          finishInterview(nextHistory);
+        } else if (!micMutedRef.current && !pausedRef.current) {
+          toggleListening(true);
+        }
+      };
+      const mixedExplanations = setup.explanationLanguage && setup.explanationLanguage !== setup.language;
+      if (mixedExplanations) {
+        speak(`${assessmentSpeech}${result.evaluation.feedback}`, () => {
+          speak(result.reply.trim(), afterSpeech);
+        }, setup.explanationLanguage);
+      } else {
+        speak(`${assessmentSpeech}${result.evaluation.feedback} ${result.reply.trim()}`, afterSpeech);
+      }
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -352,6 +694,14 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   };
 
   const toggleListening = (forceStart = false) => {
+    if (setup.mode === "text") {
+      if (!forceStart) setError("Text mode is on — type your answer and select Send answer.");
+      return;
+    }
+    if (micMutedRef.current) {
+      if (!forceStart) setError("Microphone is muted — unmute it to speak.");
+      return;
+    }
     if (listening) {
       if (forceStart) return;
       continueListeningRef.current = false;
@@ -389,8 +739,11 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     }
 
     continueListeningRef.current = true;
-    recognitionTranscriptRef.current = "";
-    recognitionInterimRef.current = "";
+    if (!preserveTranscriptRef.current) {
+      recognitionTranscriptRef.current = "";
+      recognitionInterimRef.current = "";
+    }
+    preserveTranscriptRef.current = false;
     networkRetryCountRef.current = 0;
     hasSpeechRef.current = false;
     lastSpeechAtRef.current = Date.now();
@@ -399,7 +752,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     let recognition = null;
     if (SpeechRecognition) {
       recognition = new SpeechRecognition();
-      recognition.lang = navigator.language || "en-US";
+      recognition.lang = speechLanguages[setup.language] || navigator.language || "en-US";
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
@@ -533,7 +886,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
   }, [listening, autoMode]);
 
   useEffect(() => {
-    if (!autoSubmitPendingRef.current || busy || listening || transcribing) return;
+    if (!autoSubmitPendingRef.current || busy || listening || transcribing || paused) return;
     const answer = draft.trim();
     if (!answer) {
       if (answerCaptureComplete) autoSubmitPendingRef.current = false;
@@ -543,10 +896,223 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     submitAnswer(answer);
   });
 
+  useEffect(() => {
+    if (!started || ended || paused) return undefined;
+    const timer = window.setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((endsAtRef.current - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      setElapsed(Math.max(0, Math.floor((Date.now() - startedAtRef.current - pausedTotalRef.current) / 1000)));
+      if (remaining <= 0) finishInterview(historyRef.current);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [started, ended, paused]);
+
   const sendTypedAnswer = (event) => {
     event.preventDefault();
     autoSubmitPendingRef.current = false;
     submitAnswer(draft.trim());
+  };
+
+  const suspendCapture = () => {
+    continueListeningRef.current = false;
+    window.clearTimeout(recognitionRestartRef.current);
+    recognitionRestartRef.current = null;
+    recognitionRef.current?.stop();
+    stopAudioRecording();
+    updateListening(false);
+  };
+
+  const toggleMicMute = () => {
+    const nextMuted = !micMutedRef.current;
+    micMutedRef.current = nextMuted;
+    setMicMuted(nextMuted);
+    if (nextMuted) {
+      if (listening) {
+        preserveTranscriptRef.current = true;
+        suspendCapture();
+      }
+      return;
+    }
+    const lastTurn = historyRef.current[historyRef.current.length - 1];
+    if (setup.mode !== "text" && startedRef.current && !endedRef.current && !busy &&
+        !speakingRef.current && lastTurn?.speaker === "interviewer" && autoMode) {
+      window.setTimeout(() => {
+        if (!micMutedRef.current && !pausedRef.current) toggleListening(true);
+      }, 0);
+    }
+  };
+
+  const pauseInterview = () => {
+    if (!startedRef.current || endedRef.current || pausedRef.current) return;
+    if (speakingRef.current) {
+      setError("Wait for Genie to finish speaking before pausing.");
+      return;
+    }
+    if (busy) {
+      setError("Wait for Genie to finish evaluating your answer before pausing.");
+      return;
+    }
+    pausedRef.current = true;
+    pausedAtRef.current = Date.now();
+    setPaused(true);
+    resumeListeningRef.current = listening;
+    if (listening) preserveTranscriptRef.current = true;
+    suspendCapture();
+    window.speechSynthesis?.cancel();
+    speakingRef.current = false;
+    setSubtitle("");
+    onSpeakingChange(false);
+  };
+
+  const resumeInterview = () => {
+    if (!pausedRef.current) return;
+    pausedRef.current = false;
+    setPaused(false);
+    if (pausedAtRef.current !== null) {
+      pausedTotalRef.current += Date.now() - pausedAtRef.current;
+      pausedAtRef.current = null;
+    }
+    endsAtRef.current = Date.now() + Math.max(0, secondsLeft ?? setup.duration * 60) * 1000;
+    const shouldListen = resumeListeningRef.current &&
+      setup.mode !== "text" && !micMutedRef.current && !busy &&
+      historyRef.current[historyRef.current.length - 1]?.speaker === "interviewer";
+    resumeListeningRef.current = false;
+    if (shouldListen) toggleListening(true);
+  };
+
+  const skipQuestion = async () => {
+    const currentHistory = historyRef.current;
+    if (busy || ended || paused || listening || transcribing) return;
+    if (currentHistory[currentHistory.length - 1]?.speaker !== "interviewer") return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await getInterviewerReply(currentHistory, resumeContext, { skip: true });
+      if (typeof result.reply !== "string" || !result.reply.trim()) {
+        throw new Error("Genie could not generate the next question. Please try again.");
+      }
+      skippedCountRef.current += 1;
+      const nextHistory = [...currentHistory, { speaker: "interviewer", text: result.reply.trim(), at: Date.now() }];
+      setHistory(nextHistory);
+      setDraft("");
+      setAnswerCaptureComplete(false);
+      const coveredCount = nextHistory.filter((turn) => turn.speaker === "candidate").length + skippedCountRef.current;
+      speak(result.reply.trim(), () => {
+        if (coveredCount >= setup.questions || Date.now() >= endsAtRef.current) {
+          finishInterview(nextHistory);
+        } else if (!micMutedRef.current && !pausedRef.current) {
+          toggleListening(true);
+        }
+      });
+    } catch (skipError) {
+      setError(skipError.message || "Could not skip to the next question. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const requestHint = async (level) => {
+    const currentQuestion = [...historyRef.current].reverse().find((turn) => turn.speaker === "interviewer")?.text;
+    if (!currentQuestion || hintBusy || ended) return;
+    const nextLevel = Number.isInteger(level) && level >= 1 && level <= 3 ? level : hintLevel;
+    setHintBusy(true);
+    setError("");
+    try {
+      const response = await fetch("/api/interview-hint", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ question: currentQuestion, role, level: nextLevel }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || "Could not get a hint right now.");
+      setHintFor(currentQuestion);
+      setHintLevel(nextLevel);
+      setHintText(result.hint);
+      setHintCount((count) => count + 1);
+      setHintOpen(true);
+    } catch (hintError) {
+      setError(hintError.message || "Could not get a hint right now.");
+    } finally {
+      setHintBusy(false);
+    }
+  };
+
+  const repeatQuestion = () => {
+    if (busy || ended || paused) return;
+    const lastQuestion = [...historyRef.current].reverse().find((turn) => turn.speaker === "interviewer");
+    if (!lastQuestion) {
+      setError("There is no question to repeat yet.");
+      return;
+    }
+    speak(lastQuestion.text, () => {
+      const awaitingAnswer = historyRef.current[historyRef.current.length - 1]?.speaker === "interviewer";
+      if (awaitingAnswer && !micMutedRef.current && !pausedRef.current) toggleListening(true);
+    });
+  };
+
+  const toggleCamera = async () => {
+    if (cameraStreamRef.current) {
+      stopCamera();
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Camera is not supported in this browser.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+      cameraStreamRef.current = stream;
+      setCameraOn(true);
+      onCameraChange?.(true);
+    } catch {
+      setError("Camera access was denied. Allow camera permission to use video mode.");
+    }
+  };
+
+  const stopCamera = () => {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    cameraStreamRef.current = null;
+    setCameraOn(false);
+    onCameraChange?.(false);
+  };
+
+  useEffect(() => {
+    onHistoryChange?.(history);
+  }, [history, onHistoryChange]);
+
+  useEffect(() => {
+    if (cameraOn && cameraVideoRef.current && cameraStreamRef.current) {
+      cameraVideoRef.current.srcObject = cameraStreamRef.current;
+    }
+  }, [cameraOn]);
+
+  const finishInterview = (turns) => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    autoSubmitPendingRef.current = false;
+    continueListeningRef.current = false;
+    window.clearTimeout(recognitionRestartRef.current);
+    recognitionRestartRef.current = null;
+    recognitionRef.current?.stop();
+    discardAudioRecording();
+    audioCaptureStartRef.current = null;
+    window.speechSynthesis?.cancel();
+    speakingRef.current = false;
+    stopCamera();
+    onSpeakingChange(false);
+    updateListening(false);
+    setEnded(true);
+    if (!reportSentRef.current) {
+      reportSentRef.current = true;
+      onInterviewComplete(turns ?? historyRef.current, {
+        type: setup.type,
+        company: setup.company,
+        hintsUsed: hintCount,
+        mode: setup.mode,
+        language: setup.language,
+        elapsedSeconds: Math.max(0, Math.round(elapsed)),
+      });
+    }
   };
 
   const endInterview = () => {
@@ -555,21 +1121,7 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
       setError("Wait for Genie to finish evaluating your answer before ending the interview.");
       return false;
     }
-    endedRef.current = true;
-    autoSubmitPendingRef.current = false;
-    continueListeningRef.current = false;
-    window.clearTimeout(recognitionRestartRef.current);
-    recognitionRef.current?.stop();
-    discardAudioRecording();
-    audioCaptureStartRef.current = null;
-    window.speechSynthesis?.cancel();
-    onSpeakingChange(false);
-    updateListening(false);
-    setEnded(true);
-    if (!reportSentRef.current) {
-      reportSentRef.current = true;
-      onInterviewComplete(history);
-    }
+    finishInterview(historyRef.current);
     return true;
   };
 
@@ -577,6 +1129,10 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
     controlsRef.current = {
       toggleListening: () => toggleListening(),
       endInterview,
+      toggleCamera,
+      stopCamera,
+      pauseInterview,
+      resumeInterview,
     };
   }
 
@@ -587,39 +1143,160 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
           <span className="section-kicker">LIVE AI INTERVIEW</span>
           <h2>Practice with Genie</h2>
         </div>
-        <button
-          type="button"
-          className={`voice-output-toggle ${voiceEnabled ? "enabled" : ""}`}
-          onClick={() => setVoiceEnabled((enabled) => {
-            if (enabled) {
-              window.speechSynthesis?.cancel();
-              onSpeakingChange(false);
-            }
-            return !enabled;
-          })}
-          aria-pressed={voiceEnabled}
-        >
-          {voiceEnabled ? "◖)) Voice on" : "Voice off"}
-        </button>
-        <button
-          type="button"
-          className={`voice-output-toggle ${autoMode ? "enabled" : ""}`}
-          onClick={() => setAutoMode((enabled) => !enabled)}
-          aria-pressed={autoMode}
-          title="When on, Genie listens automatically after each question and sends your answer when you pause."
-        >
-          {autoMode ? "◉ Hands-free on" : "Hands-free off"}
-        </button>
+        {setup.mode !== "text" && (
+          <>
+            <button
+              type="button"
+              className={`voice-output-toggle ${voiceEnabled ? "enabled" : ""}`}
+              onClick={() => setVoiceEnabled((enabled) => {
+                if (enabled) {
+                  window.speechSynthesis?.cancel();
+                  onSpeakingChange(false);
+                }
+                return !enabled;
+              })}
+              aria-pressed={voiceEnabled}
+            >
+              {voiceEnabled ? "◖)) Voice on" : "Voice off"}
+            </button>
+            <button
+              type="button"
+              className={`voice-output-toggle ${autoMode ? "enabled" : ""}`}
+              onClick={() => setAutoMode((enabled) => !enabled)}
+              aria-pressed={autoMode}
+              title="When on, Genie listens automatically after each question and sends your answer when you pause."
+            >
+              {autoMode ? "◉ Hands-free on" : "Hands-free off"}
+            </button>
+          </>
+        )}
       </header>
 
+      {cameraOn && (
+        <div className="camera-preview">
+          <video ref={cameraVideoRef} autoPlay muted playsInline />
+          <span>You · Camera on</span>
+        </div>
+      )}
+
       {!started ? (
-        <div className="live-interview-start">
-          <p>{autoMode
-            ? "Genie asks a question out loud, listens to your spoken answer, and replies automatically. Just talk — pause for a moment when you finish and Genie will respond."
-            : "Genie asks a question, then transcribes your spoken answer here. Stop listening to review it, then select Send answer for feedback."}</p>
-          <button type="button" className="primary-button" onClick={startInterview} disabled={busy}>
-            {busy ? "Starting interview…" : "Start live interview"}
-          </button>
+        <div className="live-interview-setup">
+          <p className="live-interview-setup-intro">
+            {setup.mode === "text"
+              ? "Configure your interview, then answer Genie's questions by typing below."
+              : "Configure your interview — Genie asks questions out loud, listens to your spoken answers, and replies automatically."}
+          </p>
+          <div className="interview-setup-grid">
+            {companyMode && (
+              <label className="setup-field">
+                <span>Company</span>
+                <input
+                  list="interview-companies"
+                  value={setup.company}
+                  onChange={(event) => updateSetup("company", event.target.value)}
+                  placeholder="e.g. Deloitte"
+                  aria-label="Target company"
+                />
+                <datalist id="interview-companies">
+                  {interviewCompanies.map((item) => <option key={item} value={item} />)}
+                </datalist>
+              </label>
+            )}
+            <label className="setup-field">
+              <span>Job Role</span>
+              <select value={role} onChange={(event) => onRoleChange?.(event)} aria-label="Interview job role">
+                {interviewRoleOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <label className="setup-field">
+              <span>{companyMode ? "Interview Round" : "Interview Type"}</span>
+              <select value={setup.type} onChange={(event) => updateSetup("type", event.target.value)} aria-label="Interview type">
+                {(companyMode ? companyRoundOptions : interviewTypeOptions).map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <label className="setup-field">
+              <span>Difficulty</span>
+              <select value={setup.difficulty} onChange={(event) => updateSetup("difficulty", event.target.value)} aria-label="Interview difficulty">
+                {interviewDifficultyOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <label className="setup-field">
+              <span>Duration</span>
+              <select value={setup.duration} onChange={(event) => updateSetup("duration", Number(event.target.value))} aria-label="Interview duration">
+                {interviewDurationOptions.map((item) => <option key={item} value={item}>{item} min</option>)}
+              </select>
+            </label>
+            <label className="setup-field">
+              <span>Questions</span>
+              <select value={setup.questions} onChange={(event) => updateSetup("questions", Number(event.target.value))} aria-label="Number of questions">
+                {interviewQuestionOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+            <label className="setup-field">
+              <span>Language</span>
+              <select value={setup.language} onChange={(event) => updateSetup("language", event.target.value)} aria-label="Interview language">
+                {interviewLanguages.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
+              </select>
+            </label>
+            <label className="setup-field">
+              <span>Explanations in</span>
+              <select value={setup.explanationLanguage} onChange={(event) => updateSetup("explanationLanguage", event.target.value)} aria-label="Explanation language">
+                <option value="">Same as interview</option>
+                {interviewLanguages.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
+              </select>
+            </label>
+            <label className="setup-field">
+              <span>Mode</span>
+              <select value={setup.mode} onChange={(event) => updateSetup("mode", event.target.value)} aria-label="Interview mode">
+                {interviewModeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </label>
+          </div>
+          {companyMode && (
+            <p className="company-interview-note">
+              Questions are company-oriented practice inspired by typical {setup.company.trim() || "company"} interviews — they are not verified actual interview questions.
+            </p>
+          )}
+          <div className="resume-upload-row">
+            <input
+              ref={resumeFileRef}
+              id="interview-resume-upload"
+              type="file"
+              accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+              onChange={uploadResume}
+              className="sr-only"
+            />
+            <label htmlFor="interview-resume-upload" className={`resume-upload-button${resumeBusy ? " busy" : ""}`}>
+              {resumeBusy ? "Analyzing resume…" : "⬆ Upload Resume"}
+            </label>
+            {resumeUpload.name ? (
+              <span className="resume-upload-status">
+                <strong>{resumeUpload.name}</strong> analyzed — Genie will ask about your skills &amp; projects
+                <button type="button" onClick={() => setResumeUpload({ text: "", name: "" })}>Remove</button>
+              </span>
+            ) : (
+              <span className="resume-upload-hint">PDF, DOCX, or TXT — questions become specific to your resume</span>
+            )}
+          </div>
+          <div className="prep-links-row">
+            <label className="prep-link-label">LinkedIn URL (Optional)</label>
+            <input value={prepLinks.linkedin} onChange={(event) => setPrepLinks((current) => ({ ...current, linkedin: event.target.value }))} placeholder="https://linkedin.com/in/..." />
+            <label className="prep-link-label">GitHub URL (Optional)</label>
+            <input value={prepLinks.github} onChange={(event) => setPrepLinks((current) => ({ ...current, github: event.target.value }))} placeholder="https://github.com/..." />
+            <label className="prep-link-label">Portfolio URL (Optional)</label>
+            <input value={prepLinks.portfolio} onChange={(event) => setPrepLinks((current) => ({ ...current, portfolio: event.target.value }))} placeholder="https://..." />
+          </div>
+          <div className="prep-textareas-row">
+            <label className="prep-textarea-label">Additional Information</label>
+            <textarea value={prepLinks.additionalInfo} onChange={(event) => setPrepLinks((current) => ({ ...current, additionalInfo: event.target.value }))} placeholder="Tell us more about yourself, your projects, achievements…" rows="2" />
+            <label className="prep-textarea-label">Job Description</label>
+            <textarea value={prepLinks.jobDescription} onChange={(event) => setPrepLinks((current) => ({ ...current, jobDescription: event.target.value }))} placeholder="Paste the job description here" rows="2" />
+          </div>
+          <div className="live-interview-start-actions">
+            <button type="button" className="primary-button" onClick={startInterview} disabled={busy}>
+              {busy ? "Starting interview…" : setup.mode === "text" ? "Start text interview" : "Start live interview"}
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -633,10 +1310,41 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
                     <strong>{assessmentLabels[turn.evaluation.assessment]}:</strong> {turn.evaluation.feedback}
                   </small>
                 )}
+                {turn.speaker === "candidate" && turn.speech && (
+                  <small className="speech-analysis-line">
+                    Speech: {turn.speech.wpm !== null ? `${turn.speech.wpm} WPM` : "—"}
+                    {" · "}{turn.speech.fillerWords} filler{turn.speech.fillerWords === 1 ? "" : "s"}
+                    {turn.speech.longPauses !== null ? ` · ${turn.speech.longPauses} long pause${turn.speech.longPauses === 1 ? "" : "s"}` : ""}
+                    {turn.speech.repeatedWords ? ` · ${turn.speech.repeatedWords} repeated` : ""}
+                    {turn.speech.clarity !== null ? ` · clarity ${turn.speech.clarity}%` : ""}
+                    {turn.speech.score !== null ? ` · score ${turn.speech.score}/100` : ""}
+                  </small>
+                )}
+                {turn.speaker === "candidate" && (
+                  <AnswerSuggestions
+                    question={[...history.slice(0, index)].reverse().find((item) => item.speaker === "interviewer")?.text}
+                    answer={turn.text}
+                    role={role}
+                    evaluation={turn.evaluation}
+                  />
+                )}
               </article>
             ))}
             {busy && <p className="live-interview-thinking" role="status">Genie is thinking…</p>}
           </div>
+          {subtitle && (
+            <p className="live-interview-subtitle" aria-live="polite"><strong>Genie AI:</strong> {subtitle}</p>
+          )}
+          {listening && setup.mode !== "text" && (
+            <div className="speech-meter" aria-live="polite">
+              <canvas ref={waveCanvasRef} className="speech-waveform" aria-label="Live microphone waveform" />
+              <div className="speech-meter-stats">
+                <span className={`speech-level ${liveWpm !== null ? "speaking" : ""}`} aria-hidden="true" />
+                <strong>{liveWpm !== null ? `~${liveWpm} WPM` : "Listening…"}</strong>
+                <small>speaking pace</small>
+              </div>
+            </div>
+          )}
           {!ended && (
             <form className="live-interview-compose" onSubmit={sendTypedAnswer}>
               <label className="sr-only" htmlFor="live-interview-answer">Your spoken or written answer</label>
@@ -646,30 +1354,109 @@ export default function LiveInterview({ role, onSpeakingChange, onListeningChang
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder="Your spoken answer appears here, or type an answer…"
                 rows="3"
-                disabled={busy}
+                disabled={busy || paused}
               />
               <div className="live-interview-actions">
-                <div className="live-interview-recording-controls">
-                  <button type="button" className="primary-button live-interview-mic-button" onClick={() => toggleListening()} disabled={busy}>
-                    {listening ? "Stop listening" : "Start speaking"}
-                  </button>
-                  <span
-                    className={`live-interview-timer${listening ? " is-active" : ""}`}
-                    role="timer"
-                    aria-label={`Listening time ${formatListeningDuration(listeningDuration)}`}
-                  >
-                    {listening && <span aria-hidden="true">● </span>}
-                    {formatListeningDuration(listeningDuration)}
-                  </span>
-                </div>
-                <button type="submit" className="primary-button" disabled={(!draft.trim() && !answerCaptureComplete) || busy || listening || transcribing}>
+                {setup.mode !== "text" && (
+                  <div className="live-interview-recording-controls">
+                    <button
+                      type="button"
+                      className={`primary-button live-interview-mic-button${micMuted ? " is-muted" : ""}`}
+                      onClick={() => (micMuted ? toggleMicMute() : toggleListening())}
+                      disabled={busy || paused}
+                    >
+                      {listening ? "Stop listening" : micMuted ? "Muted — tap to unmute" : "Start speaking"}
+                    </button>
+                    <span
+                      className={`live-interview-timer${listening ? " is-active" : ""}`}
+                      role="timer"
+                      aria-label={`Listening time ${formatListeningDuration(listeningDuration)}`}
+                    >
+                      {listening && <span aria-hidden="true">● </span>}
+                      {formatListeningDuration(listeningDuration)}
+                    </span>
+                  </div>
+                )}
+                <button type="submit" className="primary-button" disabled={(!draft.trim() && !answerCaptureComplete) || busy || listening || transcribing || paused}>
                   {busy ? "Sending…" : transcribing ? "Transcribing…" : "Send answer"}
                 </button>
               </div>
             </form>
           )}
+          {!ended && (
+            <div className="live-interview-controls-row">
+              <button
+                type="button"
+                onClick={() => requestHint(hintLevel)}
+                disabled={busy || paused || history[history.length - 1]?.speaker !== "interviewer"}
+                title="Get a hint for the current question"
+              >
+                💡 Hint{hintCount ? ` (${hintCount})` : ""}
+              </button>
+              <button
+                type="button"
+                onClick={skipQuestion}
+                disabled={busy || paused || history[history.length - 1]?.speaker !== "interviewer"}
+                title="Skip this question and move to the next one"
+              >
+                Skip question
+              </button>
+              <button type="button" onClick={repeatQuestion} disabled={busy || paused}>↺ Repeat question</button>
+              {setup.mode !== "text" && (
+                <button type="button" onClick={toggleMicMute} disabled={paused} aria-pressed={micMuted}>
+                  {micMuted ? "Unmute mic" : "Mute mic"}
+                </button>
+              )}
+              <button type="button" onClick={paused ? resumeInterview : pauseInterview} disabled={busy && !paused}>
+                {paused ? "▶ Resume" : "⏸ Pause"}
+              </button>
+              {setup.mode !== "text" && (
+                <button type="button" onClick={toggleCamera}>{cameraOn ? "Camera off" : "Camera on"}</button>
+              )}
+            </div>
+          )}
+          {hintOpen && !ended && (
+            <aside className="hint-panel" aria-label="Interview hint">
+              <header className="hint-panel-heading">
+                <strong>Genie hint</strong>
+                <span>Hints used: {hintCount}</span>
+                <button type="button" onClick={() => setHintOpen(false)} aria-label="Close hint">×</button>
+              </header>
+              <div className="hint-levels" role="group" aria-label="Hint level">
+                {[["Level 1 · Clue", 1], ["Level 2 · Concepts", 2], ["Level 3 · Approach", 3]].map(([label, level]) => (
+                  <button
+                    key={level}
+                    type="button"
+                    className={hintLevel === level ? "active" : ""}
+                    onClick={() => requestHint(level)}
+                    disabled={hintBusy}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {hintBusy ? (
+                <p className="hint-panel-body">Genie is thinking of a hint…</p>
+              ) : hintFor === [...history].reverse().find((turn) => turn.speaker === "interviewer")?.text && hintText ? (
+                <p className="hint-panel-body">{hintText}</p>
+              ) : (
+                <p className="hint-panel-body hint-empty">Choose a hint level above — Genie will nudge you without giving away the answer.</p>
+              )}
+              <button
+                type="button"
+                className="hint-another"
+                onClick={() => requestHint(hintLevel)}
+                disabled={hintBusy || history[history.length - 1]?.speaker !== "interviewer"}
+              >
+                {hintBusy ? "Getting hint…" : "↻ Get another hint"}
+              </button>
+            </aside>
+          )}
           <div className="live-interview-footer">
-            <span>{ended ? "Interview ended. See Chat for your report." : transcribing ? "Transcribing your recording… your answer will appear here shortly." : listening ? (autoMode ? "Listening… pause for a moment after you finish and Genie will respond automatically." : "Listening… your words appear in the answer box. Stop listening to review them.") : answerCaptureComplete && !draft.trim() ? "Recording stopped without a transcript. Type your answer or try speaking again." : listeningDuration ? `Listening stopped at ${formatListeningDuration(listeningDuration)}. Review your answer, then send it for feedback.` : autoMode ? "Genie is speaking or waiting — the microphone turns on automatically after each question." : "Use Start speaking to dictate an answer, or type it in the answer box."}</span>
+            {started && !ended && secondsLeft !== null && (
+              <span className="interview-time-left" role="timer">Time left {formatListeningDuration(secondsLeft)} · {formatListeningDuration(elapsed)} elapsed</span>
+            )}
+            <span>{ended ? "Interview ended. See Chat for your report." : paused ? "Interview paused — Genie and the microphone are off. Resume when you're ready." : setup.mode === "text" ? "Text mode — type your answer above and select Send answer." : transcribing ? "Transcribing your recording… your answer will appear here shortly." : listening ? (autoMode ? "Listening… pause for a moment after you finish and Genie will respond automatically." : "Listening… your words appear in the answer box. Stop listening to review them.") : answerCaptureComplete && !draft.trim() ? "Recording stopped without a transcript. Type your answer or try speaking again." : listeningDuration ? `Listening stopped at ${formatListeningDuration(listeningDuration)}. Review your answer, then send it for feedback.` : autoMode ? "Genie is speaking or waiting — the microphone turns on automatically after each question." : "Use Start speaking to dictate an answer, or type it in the answer box."}</span>
             {started && <button type="button" onClick={() => onViewTranscript(history)}>View transcript</button>}
             {ended ? (
               <button type="button" onClick={startInterview} disabled={busy}>Start again</button>

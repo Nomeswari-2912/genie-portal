@@ -24,13 +24,25 @@ export default function MockInterviewPractice() {
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answer, setAnswer] = useState("");
   const [answers, setAnswers] = useState([]);
-  const questions = questionSets[role];
+  const [sessionQuestions, setSessionQuestions] = useState([]);
+  const questions = started ? sessionQuestions : questionSets[role];
   const finished = started && questionIndex >= questions.length;
 
-  const start = () => { setAnswers([]); setAnswer(""); setQuestionIndex(0); setStarted(true); };
+  const start = () => {
+    setAnswers([]);
+    setAnswer("");
+    setQuestionIndex(0);
+    setSessionQuestions([...questionSets[role]].sort(() => Math.random() - 0.5));
+    setStarted(true);
+  };
   const nextQuestion = () => {
     if (!answer.trim()) return;
     setAnswers((current) => [...current, answer.trim()]);
+    setAnswer("");
+    setQuestionIndex((current) => current + 1);
+  };
+  const skipQuestion = () => {
+    setAnswers((current) => [...current, "(skipped this question)"]);
     setAnswer("");
     setQuestionIndex((current) => current + 1);
   };
@@ -78,7 +90,7 @@ export default function MockInterviewPractice() {
               <div className="interviewer"><div className="interviewer-avatar">✦</div><span>Genie is listening</span><span className="listening-pulse" /></div>
               <h2>{questions[questionIndex]}</h2>
               <label className="field-label answer-label">Take your time. What would you say?<textarea rows="7" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="Start wherever feels right..." /></label>
-              <div className="answer-actions"><span>Your answer stays right here with you.</span><button className="primary-button" disabled={!answer.trim()} onClick={nextQuestion}>{questionIndex === questions.length - 1 ? "Finish practice" : "Next question"} <span>→</span></button></div>
+              <div className="answer-actions"><span>Your answer stays right here with you.</span><div className="answer-action-buttons"><button className="skip-button" onClick={skipQuestion}>Skip question</button><button className="primary-button" disabled={!answer.trim()} onClick={nextQuestion}>{questionIndex === questions.length - 1 ? "Finish practice" : "Next question"} <span>→</span></button></div></div>
             </div>
           )}
         </section>
