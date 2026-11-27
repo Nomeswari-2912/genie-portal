@@ -26,7 +26,7 @@ export const interviewModules = [
     icon: icon(<><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></>),
   },
   {
-    id: "hints", label: "AI Hints", note: "3-level hints without giving answers", tone: "yellow",
+    id: "hints", label: "Genie Hints", note: "3-level hints without giving answers", tone: "yellow",
     icon: icon(<><path d="M12 3a6 6 0 0 0-9 9 9 9 0 0 0 9 9c4.97 0 9-2.24 9-5V4.34C21 3.6 19.67 3 18.25 3H12Z" /><path d="M8 12h8" /><path d="M9 16h6" /></>),
   },
   {

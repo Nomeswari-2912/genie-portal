@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { loadInterviewHistory } from "./InterviewHistory.jsx";
 
 const skillActions = (score) => {

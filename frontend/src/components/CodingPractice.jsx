@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 const languages = [
   { id: "python", label: "Python" },
@@ -175,7 +175,7 @@ export default function CodingPractice() {
       <header className="coding-toolbar">
         <div>
           <span className="section-kicker">CODING PRACTICE</span>
-          <h1>Coding interview playground</h1>
+          <h1>Genie interview coding</h1>
           <p>Get an AI-generated problem, write code, run it against test cases, then submit for feedback.</p>
         </div>
         <div className="coding-toolbar-controls">
