@@ -3,12 +3,14 @@ import GenieBot from "./components/GenieBot.jsx";
 import ResumeBuilder from "./components/ResumeBuilder.jsx";
 import MockInterview from "./components/MockInterview.jsx";
 import AttendanceReport from "./components/AttendanceReport.jsx";
+import AIGuardrails from "./components/AIGuardrails.jsx";
 
 const tools = [
   { id: "genie", label: "Genie Bot", icon: "✦", note: "Your career copilot" },
   { id: "resume", label: "Resume Builder", icon: "▤", note: "Make your next move" },
   { id: "interview", label: "AI Mock Interview", icon: "◉", note: "Practice with confidence" },
   { id: "attendance", label: "Attendance Report", icon: "▦", note: "See your progress" },
+  { id: "guardrails", label: "AI Safety & Guardrails", icon: "⛨", note: "Monitor Genie safety" },
 ];
 
 const components = {
@@ -16,6 +18,7 @@ const components = {
   resume: ResumeBuilder,
   interview: MockInterview,
   attendance: AttendanceReport,
+  guardrails: AIGuardrails,
 };
 
 export default function App() {

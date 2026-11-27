@@ -38,3 +38,12 @@ npm run build
 
 Set `GEMINI_API_KEY` in the root `.env` file to enable AI-backed features. Do not
 commit `.env`.
+
+## AI Safety & Guardrails
+
+Open **AI Safety & Guardrails** from the sidebar to review live request counts,
+privacy warnings, restricted-topic blocks, and recent safety events. The monitor
+stores aggregate counts and event metadata only; it does not retain request
+text, and its in-memory counters reset when the server restarts. This read-only
+page is visible to anyone who can access the app; the project does not currently
+have administrator accounts or role-based access.
