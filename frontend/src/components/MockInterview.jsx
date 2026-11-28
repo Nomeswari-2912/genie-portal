@@ -9,6 +9,7 @@ import InterviewPreparation from "./InterviewPreparation.jsx";
 import CompanyInterviewSetup from "./CompanyInterviewSetup.jsx";
 import SpeechAnalysis from "./SpeechAnalysis.jsx";
 import GenieHints from "./GenieHints.jsx";
+import LanguageSession from "./LanguageSession.jsx";
 import InterviewHistory, { loadInterviewHistory, saveInterviewHistory } from "./InterviewHistory.jsx";
 
 const workmap = [
@@ -527,7 +528,7 @@ export default function MockInterview({ initialView = "session" }) {
       suggestions: "answersuggestions",
       adaptive: "session",
       replay: "history",
-      language: "session",
+      language: "languagesession",
       plan: "plan",
     };
     setView(mapping[moduleId] || "session");
@@ -596,6 +597,17 @@ export default function MockInterview({ initialView = "session" }) {
     return (
       <div className="interview-workspace">
         <SpeechAnalysis onNavigate={(target) => setView(target || "workspace")} />
+      </div>
+    );
+  }
+
+  if (view === "languagesession") {
+    return (
+      <div className="interview-workspace">
+        <LanguageSession
+          onBack={() => setView("workspace")}
+          onStart={() => setView("session")}
+        />
       </div>
     );
   }
