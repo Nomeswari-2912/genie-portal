@@ -1918,3 +1918,17 @@ button { cursor: pointer; }
 .criteria-table td { padding: 6px 8px; color: #4b5563; border-bottom: 1px solid #f3f4f6; }
 .criteria-table tr:last-child td { border-bottom: 0; }
 @media (max-width: 720px) { .suggestions-columns { grid-template-columns: 1fr; } }
+
+/* ---------- Answer quality meter ---------- */
+.quality-meter { margin: 4px 0 8px; }
+.quality-meter-track { position: relative; display: flex; height: 12px; border-radius: 6px; overflow: visible; }
+.quality-seg { height: 100%; }
+.seg-poor { flex: 1; background: #ef4444; border-radius: 6px 0 0 6px; }
+.seg-needs { flex: 1; background: #f97316; }
+.seg-average { flex: 1; background: #eab308; }
+.seg-good { flex: 1; background: #22c55e; border-radius: 0 6px 6px 0; }
+.quality-indicator { position: absolute; top: 50%; width: 18px; height: 18px; background: #fff; border: 3px solid #1f2937; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.quality-labels { display: flex; margin-top: 6px; font-size: 11px; color: #6b7280; }
+.quality-labels span { flex: 1; text-align: center; }
+.quality-labels span:first-child { text-align: left; }
+.quality-labels span:last-child { text-align: right; }

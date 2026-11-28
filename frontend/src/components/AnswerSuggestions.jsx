@@ -40,6 +40,21 @@ export default function AnswerSuggestions({ defaultOpen = false }) {
         <div className="suggestions-card">
           <section className="suggestion-section">
             <h4>Answer Quality</h4>
+            <div className="quality-meter" role="img" aria-label={`Answer quality: ${data.overall}`}>
+              <div className="quality-meter-track">
+                <span className="quality-seg seg-poor" />
+                <span className="quality-seg seg-needs" />
+                <span className="quality-seg seg-average" />
+                <span className="quality-seg seg-good" />
+                <span className="quality-indicator" style={{ left: "82%" }} />
+              </div>
+              <div className="quality-labels">
+                <span>Poor</span>
+                <span>Needs improvement</span>
+                <span>Average</span>
+                <span>Good</span>
+              </div>
+            </div>
             <p className="suggestion-quality">{data.overall}</p>
           </section>
 
