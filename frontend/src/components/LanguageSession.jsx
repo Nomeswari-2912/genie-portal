@@ -18,22 +18,6 @@ export default function LanguageSession({ onBack, onStart }) {
 
   return (
     <div className="lang-session-page">
-      {/* Blurred dashboard background */}
-      <div className="lang-bg" aria-hidden="true">
-        <div className="lang-bg-content">
-          <div className="lang-bg-nav">
-            <span className="lang-bg-logo">✦ Genie</span>
-            <span>Dashboard</span><span>Interviews</span><span>Reports</span>
-          </div>
-          <h1 className="lang-bg-title">Welcome back, Vaka</h1>
-          <div className="lang-bg-banner">Prepare for your next interview with AI-powered mock sessions</div>
-          <div className="lang-bg-cards">
-            <div className="lang-bg-card" /><div className="lang-bg-card" /><div className="lang-bg-card" />
-          </div>
-        </div>
-      </div>
-      <div className="lang-overlay" aria-hidden="true" />
-
       {/* New Session modal */}
       <div className="lang-modal-wrap">
         <div className="lang-modal">
