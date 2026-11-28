@@ -2086,3 +2086,14 @@ button { cursor: pointer; }
 .company-toggle-row { margin-top: 4px; }
 @media (max-width: 900px) { .prep-settings-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .prep-settings-grid { grid-template-columns: 1fr; } }
+
+/* ---------- Adaptive interview controls ---------- */
+.ai-profile-wrap { position: relative; }
+.ai-profile-menu { position: absolute; top: calc(100% + 8px); right: 0; background: #fff; border: 1px solid #e4e1f0; border-radius: 12px; box-shadow: 0 12px 32px rgba(30,27,75,.18); padding: 10px; min-width: 180px; z-index: 20; display: grid; gap: 4px; }
+.ai-profile-name { font-size: 12px; font-weight: 700; color: #1f2937; padding: 6px 10px; border-bottom: 1px solid #f0eef8; margin-bottom: 4px; }
+.ai-profile-menu button { border: 0; background: none; text-align: left; font-size: 12.5px; color: #4c4957; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.ai-profile-menu button:hover { background: #f5f3ff; color: #5b3df5; }
+.ai-cam-preview video { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+.ai-cam-error { position: absolute; top: 108px; right: 16px; margin: 0; font-size: 11px; color: #fca5a5; background: rgba(0,0,0,.4); padding: 4px 10px; border-radius: 8px; }
+.ai-video-controls button.control-off { opacity: .55; }
+.ai-video-controls button.control-off:hover { opacity: .85; }

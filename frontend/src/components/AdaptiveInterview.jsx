@@ -1,6 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { interviewRoleOptions } from "./LiveInterview.jsx";
 
-const roles = ["Software Developer", "Python Developer", "Java Developer", "UI/UX Designer", "Data Analyst"];
+const roles = interviewRoleOptions;
 const types = ["Technical", "Behavioral", "HR", "Mixed"];
 const difficulties = ["Beginner", "Intermediate", "Advanced", "Adaptive"];
 const durations = [15, 30, 45, 60];
@@ -9,6 +10,9 @@ const languages = [
   { code: "en", name: "English" },
   { code: "te", name: "Telugu" },
   { code: "hi", name: "Hindi" },
+  { code: "ta", name: "Tamil" },
+  { code: "kn", name: "Kannada" },
+  { code: "ml", name: "Malayalam" },
 ];
 const modes = ["Video", "Audio"];
 
@@ -25,14 +29,44 @@ export default function AdaptiveInterview({ onBack, onStart }) {
   const [mode, setMode] = useState("Video");
   const [resumeName, setResumeName] = useState("");
   const [resumeError, setResumeError] = useState("");
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(false);
+  const [spkOn, setSpkOn] = useState(true);
+  const [camError, setCamError] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
   const fileRef = useRef(null);
+  const camVideoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  const toggleCamera = async () => {
+    if (camOn) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setCamOn(false);
+      setCamError("");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      streamRef.current = stream;
+      if (camVideoRef.current) camVideoRef.current.srcObject = stream;
+      setCamOn(true);
+      setCamError("");
+    } catch {
+      setCamError("Camera unavailable — check browser permissions");
+    }
+  };
 
   const handleResume = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    const ok = /\.(pdf|docx)$/i.test(file.name) || ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(file.type);
+    const ok = /\.(pdf|docx|txt)$/i.test(file.name) || ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "application/octet-stream"].includes(file.type);
     if (!ok) {
-      setResumeError("Please upload a PDF or DOCX file");
+      setResumeError("Please upload a PDF, DOCX, or TXT file");
       setResumeName("");
       return;
     }
@@ -72,9 +106,9 @@ export default function AdaptiveInterview({ onBack, onStart }) {
     <div className="adaptive-page">
       <nav className="ai-nav">
         <button type="button" onClick={onBack}>← Back to Workspace</button>
-        <button type="button" className="active">Interview Session</button>
+        <button type="button" onClick={start}>Interview Session</button>
         <button type="button" onClick={() => onStart?.({ nav: "practice" })}>Practice Questions</button>
-        <button type="button" onClick={() => onStart?.({ nav: "company" })}>Company Interview</button>
+        <button type="button" onClick={() => onStart?.({ nav: "companysetup" })}>Company Interview</button>
         <button type="button" onClick={() => onStart?.({ nav: "coding" })}>Coding</button>
         <button type="button" onClick={() => onStart?.({ nav: "plan" })}>Practice Plan</button>
         <button type="button" onClick={() => onStart?.({ nav: "history" })}>History</button>
@@ -90,7 +124,15 @@ export default function AdaptiveInterview({ onBack, onStart }) {
         </div>
         <div className="ai-header-right">
           <span className="ai-live"><span className="ai-live-dot" /> Live Session</span>
-          <button type="button" className="ai-profile">Vaka Nomeswari ▾</button>
+          <div className="ai-profile-wrap">
+            <button type="button" className="ai-profile" onClick={() => setProfileOpen((open) => !open)} aria-expanded={profileOpen}>Vaka Nomeswari ▾</button>
+            {profileOpen && (
+              <div className="ai-profile-menu">
+                <span className="ai-profile-name">Vaka Nomeswari</span>
+                <button type="button" onClick={() => { setProfileOpen(false); onBack?.(); }}>← Back to Dashboard</button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -101,12 +143,15 @@ export default function AdaptiveInterview({ onBack, onStart }) {
             <span className="ai-avatar-label">AI Interviewer</span>
             <span className="ai-speaking" />
           </div>
-          <div className="ai-cam-preview"><span>Cam</span></div>
+          <div className="ai-cam-preview">
+            {camOn ? <video ref={camVideoRef} autoPlay muted playsInline /> : <span>Cam</span>}
+          </div>
+          {camError && <p className="ai-cam-error">{camError}</p>}
           <div className="ai-video-controls">
             <span className="ai-rec">● REC</span>
-            <button type="button" title="Microphone">🎤</button>
-            <button type="button" title="Camera">📷</button>
-            <button type="button" title="Speaker">🔊</button>
+            <button type="button" title={micOn ? "Mute microphone" : "Unmute microphone"} onClick={() => setMicOn((on) => !on)} className={micOn ? "" : "control-off"}>{micOn ? "🎤" : "🔇"}</button>
+            <button type="button" title={camOn ? "Turn camera off" : "Turn camera on"} onClick={toggleCamera} className={camOn ? "" : "control-off"}>{camOn ? "📷" : "🚫"}</button>
+            <button type="button" title={spkOn ? "Mute speaker" : "Unmute speaker"} onClick={() => setSpkOn((on) => !on)} className={spkOn ? "" : "control-off"}>{spkOn ? "🔊" : "🔈"}</button>
             <button type="button" className="ai-end" onClick={onBack}>End Interview</button>
           </div>
         </div>
