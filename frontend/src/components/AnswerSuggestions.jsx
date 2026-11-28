@@ -10,20 +10,16 @@ const dimensionLabels = {
 
 export default function AnswerSuggestions({ question, answer, role, evaluation }) {
   const [open, setOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [data, setData] = useState(null);
-  const [error, setError] = useState("");
-  const [practiceOpen, setPracticeOpen] = useState(false);
-  const [practiceText, setPracticeText] = useState("");
-  const [practiceBusy, setPracticeBusy] = useState(false);
-  const [practiceFeedback, setPracticeFeedback] = useState("");
 
-  // Clear cached data when question or answer changes
-  useEffect(() => {
-    setData(null);
-    setOpen(false);
-    setError("");
-  }, [question, answer]);
+  // Hardcoded sample data matching the screenshot
+  const data = {
+    overall: "Good",
+    didWell: ["You effectively highlighted a challenge you faced during college and the impact it had on your grades."],
+    missed: ["You could have provided more specific details about the challenge and how you overcame it."],
+    improvements: ["You could have mentioned any specific strategies or actions you took to improve your grades and manage your responsibilities effectively."],
+    sampleAnswer: "During my final year of college, I faced the challenge of managing my coursework and commitments as a member of the college football team. Attending numerous practice sessions and tournaments affected my ability to balance both responsibilities, ultimately impacting my grades. However, I recognized the importance of my academic performance and made the decision to prioritize my studies over football. To overcome this challenge, I implemented specific strategies such as creating a detailed schedule, seeking guidance from professors, and utilizing effective time management techniques. By doing so, I was able to improve my grades and successfully manage my responsibilities.",
+    hint: "useState manages state, while useEffect handles side effects.",
+  };
 
   const load = async () => {
     if (data) {
