@@ -11,6 +11,7 @@ import SpeechAnalysis from "./SpeechAnalysis.jsx";
 import GenieHints from "./GenieHints.jsx";
 import LanguageSession from "./LanguageSession.jsx";
 import PracticeDashboard from "./PracticeDashboard.jsx";
+import AdaptiveInterview from "./AdaptiveInterview.jsx";
 import InterviewHistory, { loadInterviewHistory, saveInterviewHistory } from "./InterviewHistory.jsx";
 
 const workmap = [
@@ -386,7 +387,9 @@ export default function MockInterview({ initialView = "session" }) {
     setChatTab("chat");
   };
 
-  const startNewSession = useCallback((setup) => {
+  const [adaptiveLive, setAdaptiveLive] = useState(false);
+
+  const startNewSession = useCallback((setup, adaptive = false) => {
     setLiveTurns([]);
     setMessages([]);
     setCandidateAnswers([]);
@@ -401,7 +404,8 @@ export default function MockInterview({ initialView = "session" }) {
     setAddPersonOpen(false);
     setPersonDraft("");
     if (setup?.role && interviewRoleOptions.includes(setup.role)) setSelectedRole(setup.role);
-    setView("session");
+    if (adaptive) setAdaptiveLive(true);
+    else { setAdaptiveLive(false); setView("session"); }
   }, []);
 
   const changeRole = (event) => {
@@ -545,11 +549,12 @@ export default function MockInterview({ initialView = "session" }) {
       speech: "speechanalysis",
       hints: "geniehints",
       suggestions: "answersuggestions",
-      adaptive: "session",
+      adaptive: "adaptiveinterview",
       replay: "history",
       language: "languagesession",
       plan: "practicedashboard",
     };
+    if (moduleId === "adaptive") setAdaptiveLive(false);
     setView(mapping[moduleId] || "session");
   };
 
@@ -616,6 +621,20 @@ export default function MockInterview({ initialView = "session" }) {
     return (
       <div className="interview-workspace">
         <SpeechAnalysis onNavigate={(target) => setView(target || "workspace")} />
+      </div>
+    );
+  }
+
+  if (view === "adaptiveinterview" && !adaptiveLive) {
+    return (
+      <div className="interview-workspace">
+        <AdaptiveInterview
+          onBack={() => { setAdaptiveLive(false); setView("workspace"); }}
+          onStart={(payload) => {
+            if (payload?.nav) { setAdaptiveLive(false); setView(payload.nav); return; }
+            startNewSession(payload, true);
+          }}
+        />
       </div>
     );
   }
