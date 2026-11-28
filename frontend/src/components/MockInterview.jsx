@@ -11,6 +11,7 @@ import SpeechAnalysis from "./SpeechAnalysis.jsx";
 import GenieHints from "./GenieHints.jsx";
 import LanguageSession from "./LanguageSession.jsx";
 import PracticeDashboard from "./PracticeDashboard.jsx";
+import AdaptiveInterview from "./AdaptiveInterview.jsx";
 import InterviewHistory, { loadInterviewHistory, saveInterviewHistory } from "./InterviewHistory.jsx";
 
 const workmap = [
@@ -527,7 +528,7 @@ export default function MockInterview({ initialView = "session" }) {
       speech: "speechanalysis",
       hints: "geniehints",
       suggestions: "answersuggestions",
-      adaptive: "session",
+      adaptive: "adaptiveinterview",
       replay: "history",
       language: "languagesession",
       plan: "practicedashboard",
@@ -598,6 +599,21 @@ export default function MockInterview({ initialView = "session" }) {
     return (
       <div className="interview-workspace">
         <SpeechAnalysis onNavigate={(target) => setView(target || "workspace")} />
+      </div>
+    );
+  }
+
+  if (view === "adaptiveinterview") {
+    return (
+      <div className="interview-workspace">
+        <AdaptiveInterview
+          onBack={() => setView("workspace")}
+          onStart={(payload) => {
+            if (payload?.nav) { setView(payload.nav); return; }
+            if (payload?.role && interviewRoleOptions.includes(payload.role)) setSelectedRole(payload.role);
+            setView("session");
+          }}
+        />
       </div>
     );
   }
