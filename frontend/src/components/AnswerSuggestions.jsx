@@ -1,5 +1,13 @@
 import React, { useState } from "react";
 
+const hintPool = [
+  "useState manages state, while useEffect handles side effects.",
+  "Think about edge cases: empty input, duplicates, and very large values.",
+  "Structure your answer: situation → action → result.",
+  "Mention a real project example to make your answer concrete.",
+  "Keep your pace steady and pause briefly before answering.",
+];
+
 const criteria = [
   { name: "Relevance", check: "Does the answer match the question?" },
   { name: "Clarity", check: "Is the answer understandable?" },
@@ -11,6 +19,7 @@ const criteria = [
 
 export default function AnswerSuggestions({ defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
+  const [hintIndex, setHintIndex] = useState(0);
 
   // Exact sample output matching the reference
   const data = {
@@ -19,7 +28,7 @@ export default function AnswerSuggestions({ defaultOpen = false }) {
     missed: ["You should explain the exact steps you followed to overcome the challenge. Include a specific example of your time-management strategy and describe the final result."],
     improvements: ["You could have mentioned any specific strategies or actions you took to improve your grades and manage your responsibilities effectively."],
     sampleAnswer: "During my final year of college, I faced the challenge of managing my coursework and commitments as a member of the college football team. Attending numerous practice sessions and tournaments affected my ability to balance both responsibilities, ultimately impacting my grades. However, I recognized the importance of my academic performance and made the decision to prioritize my studies over football. To overcome this challenge, I implemented specific strategies such as creating a detailed schedule, seeking guidance from professors, and utilizing effective time management techniques. By doing so, I was able to improve my grades and successfully manage my responsibilities.",
-    hint: "useState manages state, while useEffect handles side effects.",
+    hint: hintPool[0],
   };
 
   return (
@@ -80,12 +89,16 @@ export default function AnswerSuggestions({ defaultOpen = false }) {
 
           <section className="suggestion-section">
             <h4>Example Hint</h4>
-            <p className="suggestion-hint">{data.hint}</p>
+            <p className="suggestion-hint">{hintPool[hintIndex]}</p>
           </section>
 
           <section className="suggestion-section">
             <p className="suggestion-assistance">Genie AI assistance: <em>"Would you like another clue or would you like to try answering?"</em></p>
-            <button type="button" className="primary-button suggestion-practice-btn">
+            <button
+              type="button"
+              className="primary-button suggestion-practice-btn"
+              onClick={() => setHintIndex((index) => (index + 1) % hintPool.length)}
+            >
               Get Another Hint
             </button>
           </section>
