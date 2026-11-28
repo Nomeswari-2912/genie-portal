@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MockInterviewPractice from "./MockInterviewPractice.jsx";
 import LiveInterview, { interviewRoleOptions } from "./LiveInterview.jsx";
 import CodingPractice from "./CodingPractice.jsx";
@@ -388,6 +388,25 @@ export default function MockInterview({ initialView = "session" }) {
   };
 
   const [adaptiveLive, setAdaptiveLive] = useState(false);
+
+  useEffect(() => {
+    if (view !== "workspace") return;
+    setLiveTurns([]);
+    setMessages([]);
+    setCandidateAnswers([]);
+    setCandidateEvaluations([]);
+    setPeople(["Genie AI", "You"]);
+    setTranscriptQuery("");
+    setDraft("");
+    setChatTab("chat");
+    setScoreInfo("");
+    setCallActive(true);
+    setRecording(true);
+    setAddPersonOpen(false);
+    setPersonDraft("");
+    setChatError("");
+    setAdaptiveLive(false);
+  }, [view]);
 
   const startNewSession = useCallback((setup, adaptive = false) => {
     setLiveTurns([]);
