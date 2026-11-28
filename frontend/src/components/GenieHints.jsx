@@ -294,7 +294,7 @@ export default function GenieHints({ onNavigate }) {
     <div className="genie-hints-page">
       <header className="gh-header">
         <div className="gh-brand">
-          <span className="gh-logo">✦</span>
+          <span className="gh-logo"><img src="/genie-mascot.png" alt="Genie" /></span>
           <strong>GENIE AI</strong>
         </div>
         <div className="gh-status">
