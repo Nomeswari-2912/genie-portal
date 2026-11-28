@@ -387,6 +387,24 @@ export default function MockInterview({ initialView = "session" }) {
     setChatTab("chat");
   };
 
+  const startNewSession = useCallback((setup) => {
+    setLiveTurns([]);
+    setMessages([]);
+    setCandidateAnswers([]);
+    setCandidateEvaluations([]);
+    setPeople(["Genie AI", "You"]);
+    setTranscriptQuery("");
+    setDraft("");
+    setChatTab("chat");
+    setScoreInfo("");
+    setCallActive(true);
+    setRecording(true);
+    setAddPersonOpen(false);
+    setPersonDraft("");
+    if (setup?.role && interviewRoleOptions.includes(setup.role)) setSelectedRole(setup.role);
+    setView("session");
+  }, []);
+
   const changeRole = (event) => {
     setSelectedRole(event.target.value);
     resetInterviewScores();
@@ -581,7 +599,7 @@ export default function MockInterview({ initialView = "session" }) {
         <InterviewPreparation
           onSubmit={handlePreparationSubmit}
           onNavigate={handlePreparationNavigate}
-          onStartInterview={() => setView("session")}
+          onStartInterview={() => startNewSession()}
         />
       </div>
     );
@@ -610,8 +628,7 @@ export default function MockInterview({ initialView = "session" }) {
           onBack={() => setView("workspace")}
           onStart={(payload) => {
             if (payload?.nav) { setView(payload.nav); return; }
-            if (payload?.role && interviewRoleOptions.includes(payload.role)) setSelectedRole(payload.role);
-            setView("session");
+            startNewSession(payload);
           }}
         />
       </div>
@@ -631,7 +648,7 @@ export default function MockInterview({ initialView = "session" }) {
       <div className="interview-workspace">
         <LanguageSession
           onBack={() => setView("workspace")}
-          onStart={() => setView("session")}
+          onStart={() => startNewSession()}
         />
       </div>
     );
