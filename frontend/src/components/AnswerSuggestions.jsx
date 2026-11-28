@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const dimensionLabels = {
   relevance: "Relevance",
@@ -17,6 +17,13 @@ export default function AnswerSuggestions({ question, answer, role, evaluation }
   const [practiceText, setPracticeText] = useState("");
   const [practiceBusy, setPracticeBusy] = useState(false);
   const [practiceFeedback, setPracticeFeedback] = useState("");
+
+  // Clear cached data when question or answer changes
+  useEffect(() => {
+    setData(null);
+    setOpen(false);
+    setError("");
+  }, [question, answer]);
 
   const load = async () => {
     if (data) {
