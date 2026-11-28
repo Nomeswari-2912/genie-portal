@@ -109,7 +109,7 @@ export default function SpeechAnalysis({ onNavigate }) {
     <div className="speech-page">
       <header className="speech-header">
         <div className="speech-brand">
-          <span className="speech-brand-icon">✦</span>
+          <span className="speech-brand-icon"><img src="/genie-mascot.png" alt="Genie" /></span>
           <div>
             <strong>GenieAI Trainer</strong>
             <small>Interview Analysis</small>
