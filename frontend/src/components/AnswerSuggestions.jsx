@@ -20,10 +20,19 @@ const criteria = [
 export default function AnswerSuggestions({ defaultOpen = false }) {
   const [open, setOpen] = useState(defaultOpen);
   const [hintIndex, setHintIndex] = useState(0);
+  const [qualityScore, setQualityScore] = useState(82); // 0-100, green zone
+
+  const qualityRating = qualityScore < 25 ? "Poor" : qualityScore < 50 ? "Needs improvement" : qualityScore < 75 ? "Average" : "Good";
+
+  const handleMeterClick = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const pct = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100));
+    setQualityScore(Math.round(pct));
+  };
 
   // Exact sample output matching the reference
   const data = {
-    overall: "Good",
+    overall: qualityRating,
     didWell: ["You effectively highlighted a challenge you faced during college and the impact it had on your grades."],
     missed: ["You should explain the exact steps you followed to overcome the challenge. Include a specific example of your time-management strategy and describe the final result."],
     improvements: ["You could have mentioned any specific strategies or actions you took to improve your grades and manage your responsibilities effectively."],
@@ -40,13 +49,13 @@ export default function AnswerSuggestions({ defaultOpen = false }) {
         <div className="suggestions-card">
           <section className="suggestion-section">
             <h4>Answer Quality</h4>
-            <div className="quality-meter" role="img" aria-label={`Answer quality: ${data.overall}`}>
-              <div className="quality-meter-track">
+            <div className="quality-meter" role="img" aria-label={`Answer quality: ${qualityRating}`}>
+              <div className="quality-meter-track" onClick={handleMeterClick} style={{ cursor: "pointer" }}>
                 <span className="quality-seg seg-poor" />
                 <span className="quality-seg seg-needs" />
                 <span className="quality-seg seg-average" />
                 <span className="quality-seg seg-good" />
-                <span className="quality-indicator" style={{ left: "82%" }} />
+                <span className="quality-indicator" style={{ left: `${qualityScore}%` }} />
               </div>
               <div className="quality-labels">
                 <span>Poor</span>
@@ -54,8 +63,17 @@ export default function AnswerSuggestions({ defaultOpen = false }) {
                 <span>Average</span>
                 <span>Good</span>
               </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={qualityScore}
+                onChange={(event) => setQualityScore(Number(event.target.value))}
+                className="quality-slider"
+                aria-label="Adjust answer quality score"
+              />
             </div>
-            <p className="suggestion-quality">{data.overall}</p>
+            <p className="suggestion-quality">{qualityRating} <small className="quality-score">({qualityScore}/100)</small></p>
           </section>
 
           <div className="suggestions-columns">

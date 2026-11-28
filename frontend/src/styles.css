@@ -1932,3 +1932,6 @@ button { cursor: pointer; }
 .quality-labels span { flex: 1; text-align: center; }
 .quality-labels span:first-child { text-align: left; }
 .quality-labels span:last-child { text-align: right; }
+
+.quality-slider { width: 100%; margin-top: 10px; accent-color: #7c5cff; cursor: pointer; }
+.quality-score { color: #6b7280; font-weight: 500; }
