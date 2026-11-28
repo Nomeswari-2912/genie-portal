@@ -59,7 +59,8 @@ export default function App() {
 
   const openTool = (toolId) => {
     setActiveTool(toolId);
-    setInterviewInitialView("session");
+    setInterviewInitialView("workspace");
+    if (toolId === "interview") setInterviewRemount((current) => current + 1);
     setHelpOpen(false);
     setProfileOpen(false);
   };
