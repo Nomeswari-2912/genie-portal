@@ -529,7 +529,7 @@ export default function MockInterview({ initialView = "session" }) {
       adaptive: "session",
       replay: "history",
       language: "languagesession",
-      plan: "plan",
+      plan: "languagesession",
     };
     setView(mapping[moduleId] || "session");
   };
