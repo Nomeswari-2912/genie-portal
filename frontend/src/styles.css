@@ -1412,8 +1412,8 @@ button { cursor: pointer; }
 .interview-module-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid #eceaf1; border-radius: 12px; background: #fff; text-align: left; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
 .interview-module-card:hover { border-color: #ac9ae6; box-shadow: 0 4px 12px #3a2f6b12; }
 .interview-module-card.active { border-color: #ac9ae6; background: #f4f1fc; }
-.interview-module-icon { width: 30px; height: 30px; display: grid; flex: 0 0 30px; place-items: center; border-radius: 8px; }
-.interview-module-icon svg { width: 20px; height: 20px; }
+.interview-module-icon { width: 52px; height: 52px; display: grid; flex: 0 0 52px; place-items: center; border-radius: 14px; background: transparent; }
+.interview-module-icon svg { width: 48px; height: 48px; }
 .interview-module-icon.purple { color: #7658d5; background: #f1edfc; }
 .interview-module-icon.blue { color: #3b7be0; background: #ebf2fd; }
 .interview-module-icon.orange { color: #df7a1c; background: #fdf1e6; }
