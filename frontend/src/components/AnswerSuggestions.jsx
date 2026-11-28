@@ -1,14 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 
-const dimensionLabels = {
-  relevance: "Relevance",
-  technicalAccuracy: "Technical accuracy",
-  completeness: "Completeness",
-  clarity: "Clarity",
-  structure: "Structure",
-};
-
-export default function AnswerSuggestions({ question, answer, role, evaluation }) {
+export default function AnswerSuggestions() {
   const [open, setOpen] = useState(false);
 
   // Hardcoded sample data matching the screenshot
@@ -21,74 +13,16 @@ export default function AnswerSuggestions({ question, answer, role, evaluation }
     hint: "useState manages state, while useEffect handles side effects.",
   };
 
-  const load = async () => {
-    if (data) {
-      setOpen((current) => !current);
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch("/api/answer-suggestions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          question,
-          answer,
-          role,
-          evaluation: evaluation
-            ? { assessment: evaluation.assessment, feedback: evaluation.feedback }
-            : null,
-        }),
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.error || "Could not generate suggestions.");
-      setData(result);
-      setOpen(true);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const practiceAgain = async () => {
-    if (!practiceText.trim() || practiceBusy) return;
-    setPracticeBusy(true);
-    setPracticeFeedback("");
-    try {
-      const response = await fetch("/api/interview-chat", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          role,
-          history: [{
-            role: "user",
-            text: `I'm practicing interview answers for the ${role} role. The question was: "${question}". My rewritten answer is: "${practiceText.trim()}". Give brief feedback on what improved versus the original and what still needs work.`,
-          }],
-        }),
-      });
-      const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.error || "Could not get practice feedback.");
-      setPracticeFeedback(result.reply || "");
-    } catch (requestError) {
-      setPracticeFeedback(requestError.message);
-    } finally {
-      setPracticeBusy(false);
-    }
-  };
-
   return (
     <div className="answer-suggestions">
-      <button type="button" className="suggestions-toggle" onClick={load} disabled={busy || !question}>
-        {busy ? "Analyzing…" : data ? (open ? "Hide suggestions" : "Show suggestions") : "✨ Get answer suggestions"}
+      <button type="button" className="suggestions-toggle" onClick={() => setOpen((current) => !current)}>
+        {open ? "Hide suggestions" : "✨ Get answer suggestions"}
       </button>
-      {error && <p className="suggestions-error" role="alert">{error}</p>}
-      {open && data && (
+      {open && (
         <div className="suggestions-card">
           <section className="suggestion-section">
             <h4>Answer Quality</h4>
-            <p className="suggestion-quality">{data.overall || "Good"}</p>
+            <p className="suggestion-quality">{data.overall}</p>
           </section>
 
           <section className="suggestion-section">
@@ -129,7 +63,7 @@ export default function AnswerSuggestions({ question, answer, role, evaluation }
 
           <section className="suggestion-section">
             <h4>Example Hint</h4>
-            <p className="suggestion-hint">{data.hint || "useState manages state, while useEffect handles side effects."}</p>
+            <p className="suggestion-hint">{data.hint}</p>
           </section>
 
           <section className="suggestion-section">
