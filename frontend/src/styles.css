@@ -1890,3 +1890,22 @@ button { cursor: pointer; }
     padding: 24px 20px;
   }
 }
+
+/* ---------- Answer Suggestions exact layout ---------- */
+.suggestion-section { margin-bottom: 16px; }
+.suggestion-section:last-child { margin-bottom: 0; }
+.suggestion-section h4 { margin: 0 0 8px; color: #1f2937; font-size: 14px; font-weight: 600; }
+.suggestion-quality { margin: 0; color: #059669; font-size: 16px; font-weight: 600; }
+.suggestion-assessment { display: grid; gap: 12px; }
+.assessment-block { background: #f9fafb; border-radius: 8px; padding: 12px; }
+.assessment-block strong { display: block; color: #374151; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.assessment-block ul { margin: 0; padding-left: 18px; }
+.assessment-block li { color: #4b5563; font-size: 13px; line-height: 1.6; margin-bottom: 4px; }
+.suggestion-guidance { display: grid; gap: 12px; }
+.guidance-block { background: #f9fafb; border-radius: 8px; padding: 12px; }
+.guidance-block strong { display: block; color: #374151; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.guidance-block .suggested-answer { margin: 0; padding: 10px 12px; border-left: 3px solid #10b981; background: #fff; color: #1f2937; font-size: 13px; line-height: 1.6; }
+.suggestion-hint { margin: 0; color: #6b7280; font-size: 13px; font-style: italic; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 10px 12px; }
+.suggestion-assistance { margin: 0; color: #4b5563; font-size: 13px; }
+.suggestion-assistance em { color: #6366f1; }
+.suggestion-practice-btn { margin-top: 12px; }

@@ -83,54 +83,57 @@ export default function AnswerSuggestions({ question, answer, role, evaluation }
       {error && <p className="suggestions-error" role="alert">{error}</p>}
       {open && data && (
         <div className="suggestions-card">
-          <section>
-            <h4>Your original answer</h4>
-            <blockquote>{answer}</blockquote>
+          <section className="suggestion-section">
+            <h4>Answer Quality</h4>
+            <p className="suggestion-quality">{data.overall || "Good"}</p>
           </section>
-          <section>
-            <h4>Answer evaluation</h4>
-            <div className="suggestion-dimensions">
-              {Object.entries(dimensionLabels).map(([key, label]) => (
-                <div className="suggestion-dimension" key={key}>
-                  <span>{label}</span>
-                  <strong>{data.dimensions?.[key] ?? "—"}{data.dimensions?.[key] !== null && data.dimensions?.[key] !== undefined ? "%" : ""}</strong>
+
+          <section className="suggestion-section">
+            <h4>Answer Assessment</h4>
+            <div className="suggestion-assessment">
+              {data.didWell?.length > 0 && (
+                <div className="assessment-block">
+                  <strong>What Went Well:</strong>
+                  <ul>{data.didWell.map((item, i) => <li key={i}>{item}</li>)}</ul>
                 </div>
-              ))}
+              )}
+              {data.missed?.length > 0 && (
+                <div className="assessment-block">
+                  <strong>What Needs Improvement:</strong>
+                  <ul>{data.missed.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                </div>
+              )}
             </div>
           </section>
-          {data.didWell?.length > 0 && (
-            <section><h4>What you did well</h4><ul>{data.didWell.map((item, i) => <li key={i}>{item}</li>)}</ul></section>
-          )}
-          {data.missed?.length > 0 && (
-            <section><h4>What you missed</h4><ul>{data.missed.map((item, i) => <li key={i}>{item}</li>)}</ul></section>
-          )}
-          {data.improvements?.length > 0 && (
-            <section><h4>How to improve</h4><ul>{data.improvements.map((item, i) => <li key={i}>{item}</li>)}</ul></section>
-          )}
-          {data.sampleAnswer && (
-            <section>
-              <h4>Suggested answer</h4>
-              <blockquote className="suggested-answer">{data.sampleAnswer}</blockquote>
-            </section>
-          )}
-          <section>
-            <button type="button" className="practice-toggle" onClick={() => setPracticeOpen((current) => !current)}>
-              {practiceOpen ? "Hide practice area" : "🎤 Practice answering again"}
+
+          <section className="suggestion-section">
+            <h4>Answer Guidance</h4>
+            <div className="suggestion-guidance">
+              {data.improvements?.length > 0 && (
+                <div className="guidance-block">
+                  <strong>What Would Have Impressed the Interviewer:</strong>
+                  <ul>{data.improvements.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                </div>
+              )}
+              {data.sampleAnswer && (
+                <div className="guidance-block">
+                  <strong>Refined Answer: Putting It All Together</strong>
+                  <blockquote className="suggested-answer">{data.sampleAnswer}</blockquote>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="suggestion-section">
+            <h4>Example Hint</h4>
+            <p className="suggestion-hint">{data.hint || "useState manages state, while useEffect handles side effects."}</p>
+          </section>
+
+          <section className="suggestion-section">
+            <p className="suggestion-assistance">Genie AI assistance: <em>"Would you like another clue or would you like to try answering?"</em></p>
+            <button type="button" className="primary-button suggestion-practice-btn">
+              Get Another Hint
             </button>
-            {practiceOpen && (
-              <div className="practice-area">
-                <textarea
-                  value={practiceText}
-                  onChange={(event) => setPracticeText(event.target.value)}
-                  placeholder="Rewrite the answer in your own words…"
-                  rows="4"
-                />
-                <button type="button" onClick={practiceAgain} disabled={practiceBusy || !practiceText.trim()}>
-                  {practiceBusy ? "Getting feedback…" : "Get feedback on my rewrite"}
-                </button>
-                {practiceFeedback && <p className="practice-feedback">{practiceFeedback}</p>}
-              </div>
-            )}
           </section>
         </div>
       )}
