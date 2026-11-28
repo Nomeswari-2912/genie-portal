@@ -524,7 +524,7 @@ export default function MockInterview({ initialView = "session" }) {
       coding: "coding",
       speech: "speechanalysis",
       hints: "geniehints",
-      suggestions: "session",
+      suggestions: "answersuggestions",
       adaptive: "session",
       replay: "history",
       language: "session",
@@ -596,6 +596,21 @@ export default function MockInterview({ initialView = "session" }) {
     return (
       <div className="interview-workspace">
         <SpeechAnalysis onNavigate={(target) => setView(target || "workspace")} />
+      </div>
+    );
+  }
+
+  if (view === "answersuggestions") {
+    return (
+      <div className="interview-workspace">
+        <div className="panel suggestions-demo-page">
+          <div className="prep-success">
+            <h1>Answer Suggestions</h1>
+            <p>Review AI feedback on interview answers — quality rating, assessment, guidance, and evaluation criteria.</p>
+          </div>
+          <AnswerSuggestions defaultOpen />
+          <button type="button" className="secondary-button" onClick={() => setView("workspace")}>← Back to workspace</button>
+        </div>
       </div>
     );
   }

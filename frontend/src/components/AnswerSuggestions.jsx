@@ -9,8 +9,8 @@ const criteria = [
   { name: "Completeness", check: "Does it address all important points?" },
 ];
 
-export default function AnswerSuggestions() {
-  const [open, setOpen] = useState(false);
+export default function AnswerSuggestions({ defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
 
   // Exact sample output matching the reference
   const data = {
