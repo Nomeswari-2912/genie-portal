@@ -1,20 +1,8 @@
 import React, { useState } from "react";
-
-const LANGUAGES = [
-  { name: "English", flag: "🇺🇸" },
-  { name: "Spanish", flag: "🇪🇸" },
-  { name: "Russian", flag: "🇷🇺" },
-  { name: "Romanian", flag: "🇷🇴" },
-  { name: "Slovak", flag: "🇸🇰" },
-  { name: "Croatian", flag: "🇭🇷" },
-  { name: "Italian", flag: "🇮🇹" },
-  { name: "German", flag: "🇩🇪" },
-  { name: "Polish", flag: "🇵🇱" },
-  { name: "Danish", flag: "🇩🇰" },
-];
+import { interviewLanguages } from "./LiveInterview.jsx";
 
 export default function LanguageSession({ onBack, onStart }) {
-  const [selected, setSelected] = useState("English");
+  const [selected, setSelected] = useState("en");
 
   return (
     <div className="lang-session-page">
@@ -27,14 +15,14 @@ export default function LanguageSession({ onBack, onStart }) {
           <p className="lang-modal-instruction">Fluent in multiple languages? Select your preferred language.</p>
 
           <div className="lang-grid">
-            {LANGUAGES.map((lang) => {
-              const active = selected === lang.name;
+            {interviewLanguages.map((lang) => {
+              const active = selected === lang.code;
               return (
                 <button
-                  key={lang.name}
+                  key={lang.code}
                   type="button"
                   className={`lang-card${active ? " active" : ""}`}
-                  onClick={() => setSelected(lang.name)}
+                  onClick={() => setSelected(lang.code)}
                 >
                   <span className="lang-flag">{lang.flag}</span>
                   <span className="lang-name">{lang.name}</span>

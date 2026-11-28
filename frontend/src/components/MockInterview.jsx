@@ -404,7 +404,7 @@ export default function MockInterview({ initialView = "session" }) {
     setAddPersonOpen(false);
     setPersonDraft("");
     if (setup?.role && interviewRoleOptions.includes(setup.role)) setSelectedRole(setup.role);
-    if (setup && typeof setup === "object" && ("type" in setup || "duration" in setup)) {
+    if (setup && typeof setup === "object" && ("type" in setup || "duration" in setup || "language" in setup)) {
       try {
         localStorage.setItem("genie-interview-setup", JSON.stringify(setup));
         localStorage.setItem("genie-interview-autostart", "1");
@@ -660,7 +660,7 @@ export default function MockInterview({ initialView = "session" }) {
       <div className="interview-workspace">
         <LanguageSession
           onBack={() => setView("workspace")}
-          onStart={() => startNewSession()}
+          onStart={(languageCode) => startNewSession(languageCode ? { language: languageCode } : undefined)}
         />
       </div>
     );
