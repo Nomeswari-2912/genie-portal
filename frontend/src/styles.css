@@ -1682,7 +1682,7 @@ button { cursor: pointer; }
 }
 
 /* ---------- Intelliview-style preparation page overrides ---------- */
-.prep-page.intelliview-style {
+.prep-page.genieview-style {
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 0;
@@ -1691,7 +1691,7 @@ button { cursor: pointer; }
   background: #f3f4f6;
 }
 
-.prep-sidebar.intelliview-style {
+.prep-sidebar.genieview-style {
   background: #e5e7eb;
   padding: 0;
   position: sticky;
@@ -1721,12 +1721,12 @@ button { cursor: pointer; }
   margin-top: 4px;
 }
 
-.prep-sidebar-nav.intelliview-style {
+.prep-sidebar-nav.genieview-style {
   gap: 0;
   padding: 8px 0;
 }
 
-.prep-nav-item.intelliview-style {
+.prep-nav-item.genieview-style {
   display: grid;
   gap: 2px;
   text-align: left;
@@ -1739,76 +1739,76 @@ button { cursor: pointer; }
   border-radius: 0;
 }
 
-.prep-nav-item.intelliview-style:hover {
+.prep-nav-item.genieview-style:hover {
   background: #dbeafe;
 }
 
-.prep-nav-item.intelliview-style.active {
+.prep-nav-item.genieview-style.active {
   background: #3b82f6;
   border-left-color: #1d4ed8;
 }
 
-.prep-nav-item.intelliview-style strong {
+.prep-nav-item.genieview-style strong {
   color: #1f2937;
   font-size: 14px;
   font-weight: 600;
 }
 
-.prep-nav-item.intelliview-style.active strong,
-.prep-nav-item.intelliview-style.active span {
+.prep-nav-item.genieview-style.active strong,
+.prep-nav-item.genieview-style.active span {
   color: #fff;
 }
 
-.prep-nav-item.intelliview-style span {
+.prep-nav-item.genieview-style span {
   color: #6b7280;
   font-size: 12px;
 }
 
-.prep-main.intelliview-style {
+.prep-main.genieview-style {
   background: #fff;
   padding: 32px 40px;
   display: flex;
   flex-direction: column;
 }
 
-.preparation-header.intelliview-style {
+.preparation-header.genieview-style {
   margin-bottom: 24px;
 }
 
-.preparation-header.intelliview-style h1 {
+.preparation-header.genieview-style h1 {
   margin: 8px 0 4px;
   color: #111827;
   font-size: 28px;
   font-weight: 600;
 }
 
-.preparation-header.intelliview-style p {
+.preparation-header.genieview-style p {
   margin: 0;
   color: #6b7280;
   font-size: 15px;
 }
 
-.preparation-section.intelliview-style {
+.preparation-section.genieview-style {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-bottom: 20px;
 }
 
-.preparation-label.intelliview-style {
+.preparation-label.genieview-style {
   font-size: 14px;
   font-weight: 600;
   color: #374151;
 }
 
-.preparation-error.intelliview-style {
+.preparation-error.genieview-style {
   margin: 6px 0 0;
   color: #dc2626;
   font-size: 13px;
   font-weight: 500;
 }
 
-.upload-button.intelliview-style {
+.upload-button.genieview-style {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1823,12 +1823,12 @@ button { cursor: pointer; }
   transition: all 0.2s;
 }
 
-.upload-button.intelliview-style:hover {
+.upload-button.genieview-style:hover {
   border-color: #3b82f6;
   background: #eff6ff;
 }
 
-.upload-button.intelliview-style.has-file {
+.upload-button.genieview-style.has-file {
   border-style: solid;
   border-color: #10b981;
   background: #ecfdf5;
@@ -1839,11 +1839,11 @@ button { cursor: pointer; }
   font-size: 18px;
 }
 
-.preparation-input.intelliview-style {
+.preparation-input.genieview-style {
   position: relative;
 }
 
-.preparation-input.intelliview-style .input-icon {
+.preparation-input.genieview-style .input-icon {
   position: absolute;
   left: 12px;
   top: 50%;
@@ -1852,7 +1852,7 @@ button { cursor: pointer; }
   color: #9ca3af;
 }
 
-.preparation-input.intelliview-style input {
+.preparation-input.genieview-style input {
   padding-left: 42px;
 }
 
@@ -1868,25 +1868,25 @@ button { cursor: pointer; }
   color: #9ca3af;
 }
 
-.preparation-textarea.intelliview-style {
+.preparation-textarea.genieview-style {
   padding-left: 42px;
 }
 
-.preparation-actions.intelliview-style {
+.preparation-actions.genieview-style {
   display: flex;
   justify-content: center;
   margin-top: 32px;
 }
 
 @media (max-width: 768px) {
-  .prep-page.intelliview-style {
+  .prep-page.genieview-style {
     grid-template-columns: 1fr;
   }
-  .prep-sidebar.intelliview-style {
+  .prep-sidebar.genieview-style {
     position: static;
     height: auto;
   }
-  .prep-main.intelliview-style {
+  .prep-main.genieview-style {
     padding: 24px 20px;
   }
 }
