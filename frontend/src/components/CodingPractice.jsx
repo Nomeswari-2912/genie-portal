@@ -3,7 +3,10 @@ import React, { useState } from "react";
 const languages = [
   { id: "python", label: "Python" },
   { id: "javascript", label: "JavaScript" },
+  { id: "typescript", label: "TypeScript" },
   { id: "java", label: "Java" },
+  { id: "perl", label: "Perl" },
+  { id: "bash", label: "Bash" },
 ];
 const difficulties = ["easy", "medium", "hard"];
 
@@ -56,6 +59,35 @@ public class Main {
         System.out.println(largest);
     }
 }
+`,
+    typescript: `import * as fs from "fs";
+
+const input = fs.readFileSync(0, "utf8").trim().split(/\\s+/);
+const n = Number(input[0]);
+const numbers: number[] = input.slice(1, 1 + n).map(Number);
+// TODO: find and print the largest number
+console.log(Math.max(...numbers));
+`,
+    perl: `use strict;
+use warnings;
+
+my $input = do { local $/; <STDIN> };
+my @tokens = split /\\s+/, $input;
+my $n = shift @tokens;
+my @numbers = map { int } @tokens[0 .. $n - 1];
+# TODO: find and print the largest number
+print((sort { $b <=> $a } @numbers)[0], "\\n");
+`,
+    bash: `#!/usr/bin/env bash
+# Reads: n on first line, then n space-separated integers
+read -r n
+read -r -a nums
+largest=${nums[0]}
+for num in "\${nums[@]}"; do
+  # TODO: track the largest value
+  (( num > largest )) && largest=$num
+done
+echo "$largest"
 `,
   };
   return { ...base, starterCode: starters[language] || starters.python };

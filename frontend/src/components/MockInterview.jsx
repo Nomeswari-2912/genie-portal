@@ -5,6 +5,10 @@ import CodingPractice from "./CodingPractice.jsx";
 import AnswerSuggestions from "./AnswerSuggestions.jsx";
 import PracticePlan from "./PracticePlan.jsx";
 import InterviewWorkspace, { interviewModules } from "./InterviewWorkspace.jsx";
+import InterviewPreparation from "./InterviewPreparation.jsx";
+import CompanyInterviewSetup from "./CompanyInterviewSetup.jsx";
+import SpeechAnalysis from "./SpeechAnalysis.jsx";
+import GenieHints from "./GenieHints.jsx";
 import InterviewHistory, { loadInterviewHistory, saveInterviewHistory } from "./InterviewHistory.jsx";
 
 const workmap = [
@@ -134,8 +138,8 @@ function radarPoints(scores) {
   }).join(" ");
 }
 
-export default function MockInterview() {
-  const [view, setView] = useState("workspace");
+export default function MockInterview({ initialView = "session" }) {
+  const [view, setView] = useState(initialView);
   const [selectedRole, setSelectedRole] = useState("UI/UX Designer");
   const [chatTab, setChatTab] = useState("chat");
   const [messages, setMessages] = useState([]);
@@ -349,6 +353,24 @@ export default function MockInterview() {
       technicalScore: roundScore(technicalScore),
       communicationScore: roundScore(communicationScore),
       dimensionScores,
+      speechTurns: turns
+        .filter((turn) => Number.isFinite(turn.at))
+        .map((turn) => ({
+          speaker: turn.speaker === "candidate" ? "candidate" : "interviewer",
+          at: turn.at,
+          speech: turn.speech ? {
+            wpm: turn.speech.wpm ?? null,
+            fillerWords: turn.speech.fillerWords ?? 0,
+            longPauses: turn.speech.longPauses ?? null,
+            repeatedWords: turn.speech.repeatedWords ?? 0,
+            clarity: turn.speech.clarity ?? null,
+            score: turn.speech.score ?? null,
+            wordCount: turn.speech.wordCount ?? 0,
+          } : null,
+          relevance: Number.isFinite(turn.evaluation?.scores?.quality?.Relevance)
+            ? Math.round(turn.evaluation.scores.quality.Relevance)
+            : null,
+        })),
       performance,
       report,
     }, ...loadInterviewHistory()]);
@@ -497,11 +519,11 @@ export default function MockInterview() {
   const handleOpenModule = (moduleId) => {
     const mapping = {
       session: "session",
-      resume: "session",
-      company: "company",
+      resume: "preparation",
+      company: "companysetup",
       coding: "coding",
-      speech: "session",
-      hints: "session",
+      speech: "speechanalysis",
+      hints: "geniehints",
       suggestions: "session",
       adaptive: "session",
       replay: "history",
@@ -511,6 +533,86 @@ export default function MockInterview() {
     setView(mapping[moduleId] || "session");
   };
 
+  const handlePreparationSubmit = async (formData) => {
+    const response = await fetch("/api/extract-resume", { method: "POST", body: formData });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.error || "Could not analyze your resume.");
+
+    const resumeText = typeof result?.resume === "string" ? result.resume.trim() : "";
+    const resumeUpload = {
+      text: resumeText.slice(0, 6000),
+      name: result?.fileName || formData.get("resume")?.name || "Uploaded resume",
+    };
+    const resumeDetails = {
+      linkedin: String(formData.get("linkedin") || "").trim(),
+      github: String(formData.get("github") || "").trim(),
+      portfolio: String(formData.get("portfolio") || "").trim(),
+      additionalInfo: String(formData.get("additionalInfo") || "").trim(),
+      jobDescription: String(formData.get("jobDescription") || "").trim(),
+      topics: Array.isArray(result?.topics) ? result.topics : [],
+    };
+    try {
+      localStorage.setItem("genie-interview-resume", JSON.stringify(resumeUpload));
+      localStorage.setItem("genie-resume-details", JSON.stringify({
+        skills: resumeDetails.topics,
+        projects: [],
+        experience: "",
+        education: "",
+        rawText: resumeUpload.text.slice(0, 4000),
+      }));
+      localStorage.setItem("genie-resume-links", JSON.stringify(resumeDetails));
+    } catch {
+      // Storage may be unavailable; interview still proceeds with in-memory data.
+    }
+    return { fileName: resumeUpload.name, topics: resumeDetails.topics };
+  };
+
+  const handlePreparationNavigate = (itemId) => {
+    const navMap = { start: "session", qa: "session", feedback: "history", prepare: "preparation", workspace: "workspace" };
+    setView(navMap[itemId] || "session");
+  };
+
+  if (view === "preparation") {
+    return (
+      <div className="interview-workspace">
+        <InterviewPreparation
+          onSubmit={handlePreparationSubmit}
+          onNavigate={handlePreparationNavigate}
+          onStartInterview={() => setView("session")}
+        />
+      </div>
+    );
+  }
+
+  if (view === "geniehints") {
+    return (
+      <div className="interview-workspace">
+        <GenieHints onNavigate={(target) => setView(target || "workspace")} />
+      </div>
+    );
+  }
+
+  if (view === "speechanalysis") {
+    return (
+      <div className="interview-workspace">
+        <SpeechAnalysis onNavigate={(target) => setView(target || "workspace")} />
+      </div>
+    );
+  }
+
+  if (view === "companysetup") {
+    return (
+      <div className="interview-workspace">
+        <CompanyInterviewSetup
+          onBack={() => setView("workspace")}
+          onStart={(config) => {
+            if (config?.role) setSelectedRole(config.role);
+            setView("company");
+          }}
+        />
+      </div>
+    );
+  }
 
   if (view === "workspace") {
     return (
@@ -527,7 +629,7 @@ export default function MockInterview() {
           <button onClick={() => setView("workspace")}>← Back to workspace</button>
           <button onClick={() => setView("session")}>Interview Session</button>
           <button className="active" aria-current="page" onClick={() => setView("practice")}>Practice Questions</button>
-          <button onClick={() => setView("company")}>Company Interview</button>
+          <button onClick={() => setView("companysetup")}>Company Interview</button>
           <button onClick={() => setView("coding")}>Coding</button>
           <button onClick={() => setView("plan")}>Practice Plan</button>
           <button onClick={() => setView("history")}>History</button>
@@ -544,7 +646,7 @@ export default function MockInterview() {
           <button onClick={() => setView("workspace")}>← Back to workspace</button>
           <button onClick={() => setView("session")}>Interview Session</button>
           <button onClick={() => setView("practice")}>Practice Questions</button>
-          <button onClick={() => setView("company")}>Company Interview</button>
+          <button onClick={() => setView("companysetup")}>Company Interview</button>
           <button onClick={() => setView("coding")}>Coding</button>
           <button onClick={() => setView("plan")}>Practice Plan</button>
           <button className="active" aria-current="page" onClick={() => setView("history")}>History</button>
@@ -562,7 +664,7 @@ export default function MockInterview() {
           <button onClick={() => setView("workspace")}>← Back to workspace</button>
           <button onClick={() => setView("session")}>Interview Session</button>
           <button onClick={() => setView("practice")}>Practice Questions</button>
-          <button onClick={() => setView("company")}>Company Interview</button>
+          <button onClick={() => setView("companysetup")}>Company Interview</button>
           <button className="active" aria-current="page" onClick={() => setView("coding")}>Coding</button>
           <button onClick={() => setView("plan")}>Practice Plan</button>
           <button onClick={() => setView("history")}>History</button>
@@ -579,7 +681,7 @@ export default function MockInterview() {
           <button onClick={() => setView("workspace")}>← Back to workspace</button>
           <button onClick={() => setView("session")}>Interview Session</button>
           <button onClick={() => setView("practice")}>Practice Questions</button>
-          <button onClick={() => setView("company")}>Company Interview</button>
+          <button onClick={() => setView("companysetup")}>Company Interview</button>
           <button onClick={() => setView("coding")}>Coding</button>
           <button className="active" aria-current="page" onClick={() => setView("plan")}>Practice Plan</button>
           <button onClick={() => setView("history")}>History</button>
@@ -597,7 +699,7 @@ export default function MockInterview() {
         <button onClick={() => setView("workspace")}>← Back to workspace</button>
         <button className={companyMode ? "" : "active"} aria-current={companyMode ? undefined : "page"} onClick={() => setView("session")}>Interview Session</button>
         <button onClick={() => setView("practice")}>Practice Questions</button>
-        <button className={companyMode ? "active" : ""} aria-current={companyMode ? "page" : undefined} onClick={() => setView("company")}>Company Interview</button>
+        <button className={companyMode ? "active" : ""} aria-current={companyMode ? "page" : undefined} onClick={() => setView("companysetup")}>Company Interview</button>
         <button onClick={() => setView("coding")}>Coding</button>
         <button onClick={() => setView("plan")}>Practice Plan</button>
         <button onClick={() => setView("history")}>History</button>

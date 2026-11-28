@@ -70,6 +70,7 @@ const interviewModeOptions = [
 const defaultSetup = {
   type: "Technical",
   company: "",
+  experience: "",
   difficulty: "Medium",
   duration: 30,
   questions: 10,
@@ -85,6 +86,7 @@ function loadSavedSetup() {
     return {
       type: interviewTypeOptions.includes(saved.type) ? saved.type : defaultSetup.type,
       company: typeof saved.company === "string" ? saved.company.trim().slice(0, 80) : defaultSetup.company,
+      experience: ["Fresher", "Junior", "Mid-level", "Senior"].includes(saved.experience) ? saved.experience : defaultSetup.experience,
       difficulty: interviewDifficultyOptions.includes(saved.difficulty) ? saved.difficulty : defaultSetup.difficulty,
       duration: interviewDurationOptions.includes(Number(saved.duration)) ? Number(saved.duration) : defaultSetup.duration,
       questions: interviewQuestionOptions.includes(Number(saved.questions)) ? Number(saved.questions) : defaultSetup.questions,
@@ -1208,6 +1210,14 @@ export default function LiveInterview({ role, onRoleChange, onSpeakingChange, on
                 {interviewRoleOptions.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </label>
+            {companyMode && (
+              <label className="setup-field">
+                <span>Experience</span>
+                <select value={setup.experience} onChange={(event) => updateSetup("experience", event.target.value)} aria-label="Candidate experience level">
+                  {["", "Fresher", "Junior", "Mid-level", "Senior"].map((item) => <option key={item} value={item}>{item || "Select…"}</option>)}
+                </select>
+              </label>
+            )}
             <label className="setup-field">
               <span>{companyMode ? "Interview Round" : "Interview Type"}</span>
               <select value={setup.type} onChange={(event) => updateSetup("type", event.target.value)} aria-label="Interview type">

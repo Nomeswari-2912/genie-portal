@@ -6,10 +6,6 @@ const icon = (paths) => (
 
 export const interviewModules = [
   {
-    id: "session", label: "Interview Session", note: "Live AI mock interview with voice", tone: "purple",
-    icon: icon(<><path d="M12 3 5 6v5c0 4.4 3 8.3 7 9.5 4-1.2 7-5.1 7-9.5V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></>),
-  },
-  {
     id: "resume", label: "Resume-Based Interview", note: "Questions tailored to your resume", tone: "blue",
     icon: icon(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></>),
   },

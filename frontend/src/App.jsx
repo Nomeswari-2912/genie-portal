@@ -36,6 +36,8 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [safetyModule, setSafetyModule] = useState(() => readRoute().module);
+  const [interviewInitialView, setInterviewInitialView] = useState("session");
+  const [interviewRemount, setInterviewRemount] = useState(0);
   const ActiveComponent = components[activeTool];
   const activeSafetyModule = safetyModules.find((module) => module.id === safetyModule);
   const active = tools.find((tool) => tool.id === activeTool);
@@ -57,6 +59,14 @@ export default function App() {
 
   const openTool = (toolId) => {
     setActiveTool(toolId);
+    setInterviewInitialView("session");
+    setHelpOpen(false);
+    setProfileOpen(false);
+  };
+
+  const openInterviewWorkspace = () => {
+    setInterviewInitialView("workspace");
+    setInterviewRemount((current) => current + 1);
     setHelpOpen(false);
     setProfileOpen(false);
   };
@@ -124,7 +134,7 @@ export default function App() {
         <header className="topbar">
           <nav className="breadcrumb" aria-label="Breadcrumb">
             {activeTool === "workspace" ? <strong aria-current="page">Workspace</strong> : (
-              <button type="button" className="crumb-link" onClick={() => openTool("workspace")}>Workspace</button>
+              <button type="button" className="crumb-link" onClick={() => (activeTool === "interview" ? openInterviewWorkspace() : openTool("workspace"))}>Workspace</button>
             )}
             {active && <><span className="crumb-slash">/</span><strong>{active.label}</strong></>}
             {activeTool === "guardrails" && activeSafetyModule && <><span className="crumb-slash">/</span><strong>{activeSafetyModule.label}</strong></>}
@@ -155,6 +165,8 @@ export default function App() {
             />
           ) : activeTool === "guardrails" ? (
             <AIGuardrails activeModule={safetyModule} onOpenWorkspace={() => openTool("workspace")} />
+          ) : activeTool === "interview" ? (
+            <MockInterview key={interviewRemount} initialView={interviewInitialView} />
           ) : (
             <ActiveComponent />
           )}
