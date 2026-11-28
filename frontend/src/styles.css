@@ -2073,3 +2073,16 @@ button { cursor: pointer; }
 .ai-start:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(124,92,255,.35); }
 @media (max-width: 1000px) { .ai-body { grid-template-columns: 1fr; } .ai-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .ai-grid { grid-template-columns: 1fr; } .ai-nav { gap: 4px; } .ai-nav button { font-size: 11px; padding: 6px 10px; } }
+
+/* ---------- Interview settings controls ---------- */
+.prep-settings-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.prep-setting-field { display: grid; gap: 6px; }
+.prep-setting-field span { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; }
+.prep-setting-field select { border: 1px solid #e4e1f0; border-radius: 9px; padding: 9px 11px; font-size: 13px; color: #1f2937; background: #fff; }
+.prep-setting-field select:focus { outline: 2px solid #c4b5fd; border-color: #7c5cff; }
+.prep-toggle-row, .company-toggle-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.company-resume-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0eef8; }
+.company-resume-hint { font-size: 12px; color: #9ca3af; }
+.company-toggle-row { margin-top: 4px; }
+@media (max-width: 900px) { .prep-settings-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .prep-settings-grid { grid-template-columns: 1fr; } }

@@ -404,6 +404,14 @@ export default function MockInterview({ initialView = "session" }) {
     setAddPersonOpen(false);
     setPersonDraft("");
     if (setup?.role && interviewRoleOptions.includes(setup.role)) setSelectedRole(setup.role);
+    if (setup && typeof setup === "object" && ("type" in setup || "duration" in setup)) {
+      try {
+        localStorage.setItem("genie-interview-setup", JSON.stringify(setup));
+        localStorage.setItem("genie-interview-autostart", "1");
+      } catch {
+        // Storage may be unavailable.
+      }
+    }
     if (adaptive) setAdaptiveLive(true);
     else { setAdaptiveLive(false); setView("session"); }
   }, []);
@@ -603,7 +611,7 @@ export default function MockInterview({ initialView = "session" }) {
         <InterviewPreparation
           onSubmit={handlePreparationSubmit}
           onNavigate={handlePreparationNavigate}
-          onStartInterview={() => startNewSession()}
+          onStartInterview={(config) => startNewSession(config)}
         />
       </div>
     );

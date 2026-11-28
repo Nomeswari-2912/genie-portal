@@ -24,35 +24,40 @@ const speechLanguages = {
   zh: "zh-CN",
   hi: "hi-IN",
   te: "te-IN",
+  ta: "ta-IN",
+  kn: "kn-IN",
+  ml: "ml-IN",
 };
 
 const interviewLanguages = [
   { code: "en", name: "English" },
+  { code: "te", name: "Telugu" },
+  { code: "hi", name: "Hindi" },
+  { code: "ta", name: "Tamil" },
+  { code: "kn", name: "Kannada" },
+  { code: "ml", name: "Malayalam" },
   { code: "es", name: "Spanish" },
   { code: "fr", name: "French" },
   { code: "de", name: "German" },
   { code: "ru", name: "Russian" },
   { code: "zh", name: "Chinese" },
-  { code: "hi", name: "Hindi" },
-  { code: "te", name: "Telugu" },
 ];
 
 export const interviewRoleOptions = [
   "UI/UX Designer",
-  "Product Designer",
-  "Software Engineer",
-  "Java Developer",
+  "Software Developer",
   "Python Developer",
-  "Full Stack Developer",
+  "Java Developer",
   "Frontend Developer",
   "Backend Developer",
-  "DevOps Engineer",
+  "Full Stack Developer",
   "Data Analyst",
-  "Data Scientist",
-  "Marketing Manager",
-  "HR Executive",
+  "AI/ML Engineer",
+  "Database Administrator",
+  "Cloud Engineer",
+  "Cybersecurity Engineer",
 ];
-const interviewTypeOptions = ["HR", "Technical", "Coding", "Behavioral", "Aptitude"];
+const interviewTypeOptions = ["HR", "Technical", "Coding", "Behavioral", "Mixed", "Aptitude"];
 const companyRoundOptions = ["Aptitude", "Technical", "HR", "Coding"];
 const interviewCompanies = [
   "Deloitte", "Accenture", "TCS", "Infosys", "Wipro", "HCLTech", "Tech Mahindra",
@@ -131,8 +136,12 @@ export default function LiveInterview({ role, onRoleChange, onSpeakingChange, on
   const [listeningDuration, setListeningDuration] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
   const [answerCaptureComplete, setAnswerCaptureComplete] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [autoMode, setAutoMode] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(() => {
+    try { return localStorage.getItem("genie-voice-enabled") !== "0"; } catch { return true; }
+  });
+  const [autoMode, setAutoMode] = useState(() => {
+    try { return localStorage.getItem("genie-hands-free") !== "0"; } catch { return true; }
+  });
   const [setup, setSetup] = useState(loadSavedSetup);
   const [secondsLeft, setSecondsLeft] = useState(null);
   const [elapsed, setElapsed] = useState(0);
@@ -237,6 +246,28 @@ export default function LiveInterview({ role, onRoleChange, onSpeakingChange, on
       // Storage may be unavailable; the in-memory resume still applies.
     }
   }, [resumeUpload]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("genie-voice-enabled", voiceEnabled ? "1" : "0");
+      localStorage.setItem("genie-hands-free", autoMode ? "1" : "0");
+    } catch {
+      // Storage may be unavailable.
+    }
+  }, [voiceEnabled, autoMode]);
+
+  const autoStartPendingRef = useRef(false);
+  const autoStartFiredRef = useRef(false);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("genie-interview-autostart") === "1") {
+        localStorage.removeItem("genie-interview-autostart");
+        autoStartPendingRef.current = true;
+      }
+    } catch {
+      // Storage may be unavailable.
+    }
+  }, []);
 
   const uploadResume = async (event) => {
     const file = event.target.files?.[0];
@@ -628,6 +659,13 @@ export default function LiveInterview({ role, onRoleChange, onSpeakingChange, on
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (autoStartPendingRef.current && !autoStartFiredRef.current && !busy) {
+      autoStartFiredRef.current = true;
+      void startInterview();
+    }
+  });
 
   const submitAnswer = async (answer) => {
     if (busy || ended || paused || listening || transcribing) return;

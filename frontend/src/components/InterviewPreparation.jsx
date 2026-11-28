@@ -1,4 +1,29 @@
 import React, { useState } from "react";
+import { interviewRoleOptions } from "./LiveInterview.jsx";
+
+const typeOptions = ["Technical", "HR", "Behavioral", "Coding", "Mixed"];
+const difficultyOptions = ["Easy", "Medium", "Hard", "Adaptive"];
+const durationOptions = [15, 30, 45, 60];
+const questionOptions = [5, 10, 15, 20];
+const languageOptions = [
+  { code: "en", name: "English" },
+  { code: "te", name: "Telugu" },
+  { code: "hi", name: "Hindi" },
+  { code: "ta", name: "Tamil" },
+  { code: "kn", name: "Kannada" },
+  { code: "ml", name: "Malayalam" },
+];
+const explanationOptions = [
+  { code: "", name: "Same as Interview" },
+  { code: "en", name: "English" },
+  { code: "te", name: "Telugu" },
+  { code: "hi", name: "Hindi" },
+];
+const modeOptions = [
+  { value: "video", label: "Video" },
+  { value: "voice", label: "Audio" },
+  { value: "text", label: "Text" },
+];
 
 const sidebarItems = [
   { id: "dashboard", label: "Dashboard", note: "Overview", target: "workspace" },
@@ -16,14 +41,30 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
   const [portfolio, setPortfolio] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [jobDescription, setJobDescription] = useState("");
+  const [role, setRole] = useState(interviewRoleOptions[0]);
+  const [interviewType, setInterviewType] = useState("Technical");
+  const [difficulty, setDifficulty] = useState("Adaptive");
+  const [duration, setDuration] = useState(30);
+  const [questions, setQuestions] = useState(10);
+  const [language, setLanguage] = useState("en");
+  const [explanationLanguage, setExplanationLanguage] = useState("");
+  const [mode, setMode] = useState("voice");
+  const [voiceOn, setVoiceOn] = useState(() => {
+    try { return localStorage.getItem("genie-voice-enabled") !== "0"; } catch { return true; }
+  });
+  const [handsFree, setHandsFree] = useState(() => {
+    try { return localStorage.getItem("genie-hands-free") !== "0"; } catch { return true; }
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null);
 
   const handleResumeUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.type !== "application/pdf") {
-      setResumeError("");
+    const ok = /\.(pdf|docx|txt)$/i.test(file.name) ||
+      ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "application/octet-stream"].includes(file.type);
+    if (!ok) {
+      setResumeError("Please upload a PDF, DOCX, or TXT file");
       setResumeFile(null);
       return;
     }
@@ -34,6 +75,31 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
     }
     setResumeError("");
     setResumeFile(file);
+  };
+
+  const toggleVoice = () => {
+    const next = !voiceOn;
+    setVoiceOn(next);
+    try { localStorage.setItem("genie-voice-enabled", next ? "1" : "0"); } catch { /* ignore */ }
+  };
+
+  const toggleHandsFree = () => {
+    const next = !handsFree;
+    setHandsFree(next);
+    try { localStorage.setItem("genie-hands-free", next ? "1" : "0"); } catch { /* ignore */ }
+  };
+
+  const interviewConfig = {
+    role,
+    type: interviewType,
+    difficulty: difficulty === "Adaptive" ? "Medium" : difficulty,
+    company: "",
+    experience: "",
+    duration,
+    questions,
+    language,
+    explanationLanguage,
+    mode,
   };
 
   const handleSubmit = async (event) => {
@@ -125,7 +191,7 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
             </section>
 
             <div className="prep-success-actions">
-              <button type="button" className="primary-button" onClick={onStartInterview}>
+              <button type="button" className="primary-button" onClick={() => onStartInterview?.(interviewConfig)}>
                 Start AI mock interview →
               </button>
               <button type="button" className="secondary-button" onClick={() => setSubmitted(null)}>
@@ -148,15 +214,15 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
                   <input
                     id="resume-upload"
                     type="file"
-                    accept="application/pdf"
+                    accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
                     onChange={handleResumeUpload}
                     className="sr-only"
                   />
                   <label htmlFor="resume-upload" className={`upload-button genieview-style${resumeFile ? " has-file" : ""}`}>
                     <span className="upload-icon">📄</span>
-                    {resumeFile ? `✓ ${resumeFile.name}` : "Upload Resume PDF"}
+                    {resumeFile ? `✓ ${resumeFile.name}` : "Upload Resume (PDF, DOCX, TXT)"}
                   </label>
-                  <p className="preparation-error genieview-style" role="alert">{resumeError || "* Required - Please upload your resume in PDF format"}</p>
+                  <p className="preparation-error genieview-style" role="alert">{resumeError || "* Required - Please upload your resume (PDF, DOCX, or TXT)"}</p>
                 </div>
               </section>
 
@@ -218,6 +284,68 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
                     onChange={(event) => setJobDescription(event.target.value)}
                     rows="4"
                   />
+                </div>
+              </section>
+
+              <section className="preparation-section genieview-style">
+                <label className="preparation-label genieview-style">Interview Settings</label>
+                <div className="prep-settings-grid">
+                  <label className="prep-setting-field">
+                    <span>Job Role</span>
+                    <select value={role} onChange={(event) => setRole(event.target.value)}>
+                      {interviewRoleOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
+                  </label>
+                  <label className="prep-setting-field">
+                    <span>Interview Type</span>
+                    <select value={interviewType} onChange={(event) => setInterviewType(event.target.value)}>
+                      {typeOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
+                  </label>
+                  <label className="prep-setting-field">
+                    <span>Difficulty</span>
+                    <select value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
+                      {difficultyOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
+                  </label>
+                  <label className="prep-setting-field">
+                    <span>Duration</span>
+                    <select value={duration} onChange={(event) => setDuration(Number(event.target.value))}>
+                      {durationOptions.map((item) => <option key={item} value={item}>{item} min</option>)}
+                    </select>
+                  </label>
+                  <label className="prep-setting-field">
+                    <span>Questions</span>
+                    <select value={questions} onChange={(event) => setQuestions(Number(event.target.value))}>
+                      {questionOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
+                  </label>
+                  <label className="prep-setting-field">
+                    <span>Language</span>
+                    <select value={language} onChange={(event) => setLanguage(event.target.value)}>
+                      {languageOptions.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="prep-setting-field">
+                    <span>Explanations in</span>
+                    <select value={explanationLanguage} onChange={(event) => setExplanationLanguage(event.target.value)}>
+                      {explanationOptions.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="prep-setting-field">
+                    <span>Mode</span>
+                    <select value={mode} onChange={(event) => setMode(event.target.value)}>
+                      {modeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <div className="prep-toggle-row">
+                  <button type="button" className={`voice-output-toggle${voiceOn ? " enabled" : ""}`} onClick={toggleVoice} aria-pressed={voiceOn}>
+                    {voiceOn ? "◖)) Voice on" : "Voice off"}
+                  </button>
+                  <button type="button" className={`voice-output-toggle${handsFree ? " enabled" : ""}`} onClick={toggleHandsFree} aria-pressed={handsFree} title="Automatically listen for your answers after each question">
+                    {handsFree ? "◉ Hands-free on" : "Hands-free off"}
+                  </button>
                 </div>
               </section>
 

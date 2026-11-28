@@ -169,19 +169,27 @@ const languageNames = {
   zh: "Chinese",
   hi: "Hindi",
   te: "Telugu",
+  ta: "Tamil",
+  kn: "Kannada",
+  ml: "Malayalam",
 };
 
 const interviewRoles = new Set([
   "UI/UX Designer",
-  "Product Designer",
-  "Software Engineer",
-  "Java Developer",
+  "Software Developer",
   "Python Developer",
-  "Full Stack Developer",
+  "Java Developer",
   "Frontend Developer",
   "Backend Developer",
-  "DevOps Engineer",
+  "Full Stack Developer",
   "Data Analyst",
+  "AI/ML Engineer",
+  "Database Administrator",
+  "Cloud Engineer",
+  "Cybersecurity Engineer",
+  "Product Designer",
+  "Software Engineer",
+  "DevOps Engineer",
   "Data Scientist",
   "Marketing Manager",
   "HR Executive",
@@ -201,9 +209,14 @@ const interviewTopicGuidance = {
   "Product Designer": "Product sense, UX process, cross-functional collaboration, portfolio, HR",
   "Marketing Manager": "Campaign strategy, analytics, content, leadership, HR",
   "HR Executive": "HR knowledge, communication, conflict handling, administration, HR",
+  "Software Developer": "Programming fundamentals, DSA, debugging, projects, HR",
+  "AI/ML Engineer": "ML fundamentals, model evaluation, Python, data pipelines, projects, HR",
+  "Database Administrator": "SQL, database design, indexing, backups, performance tuning, HR",
+  "Cloud Engineer": "Cloud platforms, IaC, networking, DevOps practices, security, HR",
+  "Cybersecurity Engineer": "Network security, vulnerability assessment, cryptography, incident response, HR",
 };
 
-const interviewTypes = new Set(["HR", "Technical", "Coding", "Behavioral", "Aptitude"]);
+const interviewTypes = new Set(["HR", "Technical", "Coding", "Behavioral", "Mixed", "Aptitude"]);
 const interviewDifficulties = new Set(["Easy", "Medium", "Hard"]);
 const interviewDurations = new Set([15, 30, 45, 60]);
 const interviewQuestionCounts = new Set([5, 10, 15, 20]);
@@ -649,7 +662,7 @@ app.post("/api/interview-turn", (request, response, next) => {
   const interviewLanguage = languageNames[interviewConfig.language] || languageNames.en;
   const prompt = [
     `You are Genie, a warm, realistic interviewer conducting a live mock interview for a ${role} position.`,
-    `Interview format: a ${interviewConfig.type} interview at ${interviewConfig.difficulty} difficulty. Shape your questions to match: HR focuses on motivation and culture fit, Technical on role knowledge and problem-solving, Coding on programming concepts and small coding challenges discussed verbally, and Behavioral on past experiences using STAR-style questions. ${interviewConfig.difficulty === "Easy" ? "Keep questions straightforward." : interviewConfig.difficulty === "Hard" ? "Ask probing, in-depth questions that test deep expertise." : "Balance fundamentals with moderately challenging questions."}`,
+    `Interview format: a ${interviewConfig.type} interview at ${interviewConfig.difficulty} difficulty. Shape your questions to match: HR focuses on motivation and culture fit, Technical on role knowledge and problem-solving, Coding on programming concepts and small coding challenges discussed verbally, Mixed on a rotating blend of technical, behavioral, and HR questions, and Behavioral on past experiences using STAR-style questions. ${interviewConfig.difficulty === "Easy" ? "Keep questions straightforward." : interviewConfig.difficulty === "Hard" ? "Ask probing, in-depth questions that test deep expertise." : "Balance fundamentals with moderately challenging questions."}`,
     `Plan to cover about ${interviewConfig.questions} questions within roughly ${interviewConfig.duration} minutes. Pace the interview accordingly, ask only one question at a time, and when the planned number of questions has been answered, wrap up politely instead of starting a new topic.`,
     interviewConfig.explanationLanguage
       ? `Bilingual interview mode: ask all questions and the spoken reply in ${interviewLanguage}, but write the evaluation feedback, strengths, and improvements in ${languageNames[interviewConfig.explanationLanguage]} so the candidate can learn from explanations in their preferred language. Keep JSON keys, score values, and assessment labels exactly as specified in English.`
