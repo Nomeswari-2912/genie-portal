@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 
 const sidebarItems = [
-  { id: "start", label: "Start AI mock interview", note: "Begin a live session" },
-  { id: "qa", label: "Q&A", note: "View interview questions and answers" },
-  { id: "feedback", label: "Feedback", note: "View interview performance feedback" },
+  { id: "dashboard", label: "Dashboard", note: "Overview", target: "workspace" },
   { id: "prepare", label: "Prepare", note: "Upload resume and details", active: true },
+  { id: "mock", label: "Mock Interview", note: "Live AI session", target: "session" },
+  { id: "qa", label: "Q&A", note: "View questions and answers", target: "session" },
+  { id: "feedback", label: "Feedback", note: "View performance", target: "history" },
 ];
 
 export default function InterviewPreparation({ onSubmit, onNavigate, onStartInterview }) {
@@ -22,7 +23,7 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.type !== "application/pdf") {
-      setResumeError("Please upload your resume in PDF format");
+      setResumeError("");
       setResumeFile(null);
       return;
     }
@@ -38,7 +39,7 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!resumeFile) {
-      setResumeError("Please upload your resume in PDF format");
+      setResumeError("Required - Please upload your resume in PDF format");
       return;
     }
     setSubmitting(true);
@@ -74,19 +75,19 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
   ] : [];
 
   return (
-    <div className="prep-page">
-      <aside className="prep-sidebar">
-        <button type="button" className="prep-back" onClick={() => onNavigate?.("workspace")}>
-          ← Back to workspace
-        </button>
-        <div className="prep-sidebar-title">Mock Interview</div>
-        <nav className="prep-sidebar-nav">
+    <div className="prep-page intelliview-style">
+      <aside className="prep-sidebar intelliview-style">
+        <div className="prep-brand">
+          <span className="prep-brand-logo">◉</span>
+          <strong>Intelliview</strong>
+        </div>
+        <nav className="prep-sidebar-nav intelliview-style">
           {sidebarItems.map((item) => (
             <button
               key={item.id}
               type="button"
-              className={`prep-nav-item${item.active ? " active" : ""}`}
-              onClick={() => !item.active && onNavigate?.(item.id)}
+              className={`prep-nav-item intelliview-style${item.active ? " active" : ""}`}
+              onClick={() => !item.active && onNavigate?.(item.target || "workspace")}
             >
               <strong>{item.label}</strong>
               <span>{item.note}</span>
@@ -95,7 +96,7 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
         </nav>
       </aside>
 
-      <main className="prep-main">
+      <main className="prep-main intelliview-style">
         {submitted ? (
           <div className="prep-success">
             <div className="prep-success-icon">✓</div>
@@ -134,18 +135,15 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
           </div>
         ) : (
           <>
-            <header className="preparation-header">
+            <header className="preparation-header intelliview-style">
               <span className="section-kicker">INTERVIEW PREPARATION</span>
               <h1>Interview Preparation</h1>
               <p>Upload your resume and provide additional information to prepare for your interview.</p>
             </header>
 
             <form className="preparation-form" onSubmit={handleSubmit}>
-              <section className="preparation-section">
-                <label className="preparation-label">
-                  Resume
-                  <span className="required">*</span>
-                </label>
+              <section className="preparation-section intelliview-style">
+                <label className="preparation-label intelliview-style">Resume</label>
                 <div className="preparation-upload">
                   <input
                     id="resume-upload"
@@ -154,18 +152,18 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
                     onChange={handleResumeUpload}
                     className="sr-only"
                   />
-                  <label htmlFor="resume-upload" className={`upload-button${resumeFile ? " has-file" : ""}`}>
+                  <label htmlFor="resume-upload" className={`upload-button intelliview-style${resumeFile ? " has-file" : ""}`}>
+                    <span className="upload-icon">📄</span>
                     {resumeFile ? `✓ ${resumeFile.name}` : "Upload Resume PDF"}
                   </label>
-                  {resumeError && <p className="preparation-error" role="alert">{resumeError}</p>}
-                  <p className="preparation-hint">* Required - Please upload your resume in PDF format</p>
+                  <p className="preparation-error intelliview-style" role="alert">{resumeError || "* Required - Please upload your resume in PDF format"}</p>
                 </div>
               </section>
 
-              <section className="preparation-section">
-                <label className="preparation-label">Professional Links</label>
+              <section className="preparation-section intelliview-style">
+                <label className="preparation-label intelliview-style">Professional Links</label>
                 <div className="preparation-links">
-                  <div className="preparation-input">
+                  <div className="preparation-input intelliview-style">
                     <span className="input-icon">💼</span>
                     <input
                       type="url"
@@ -174,7 +172,7 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
                       onChange={(event) => setLinkedin(event.target.value)}
                     />
                   </div>
-                  <div className="preparation-input">
+                  <div className="preparation-input intelliview-style">
                     <span className="input-icon">{`{ }`}</span>
                     <input
                       type="url"
@@ -183,7 +181,7 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
                       onChange={(event) => setGithub(event.target.value)}
                     />
                   </div>
-                  <div className="preparation-input">
+                  <div className="preparation-input intelliview-style">
                     <span className="input-icon">📂</span>
                     <input
                       type="url"
@@ -195,29 +193,35 @@ export default function InterviewPreparation({ onSubmit, onNavigate, onStartInte
                 </div>
               </section>
 
-              <section className="preparation-section">
-                <label className="preparation-label">Additional Information</label>
-                <textarea
-                  className="preparation-textarea"
-                  placeholder="Tell us more about yourself, your projects, achievements…"
-                  value={additionalInfo}
-                  onChange={(event) => setAdditionalInfo(event.target.value)}
-                  rows="4"
-                />
+              <section className="preparation-section intelliview-style">
+                <label className="preparation-label intelliview-style">Additional Information</label>
+                <div className="preparation-textarea-wrap">
+                  <span className="textarea-icon">ℹ</span>
+                  <textarea
+                    className="preparation-textarea intelliview-style"
+                    placeholder="Tell us more about yourself, your projects, achievements,…"
+                    value={additionalInfo}
+                    onChange={(event) => setAdditionalInfo(event.target.value)}
+                    rows="4"
+                  />
+                </div>
               </section>
 
-              <section className="preparation-section">
-                <label className="preparation-label">Job Description</label>
-                <textarea
-                  className="preparation-textarea"
-                  placeholder="Paste the job description here"
-                  value={jobDescription}
-                  onChange={(event) => setJobDescription(event.target.value)}
-                  rows="4"
-                />
+              <section className="preparation-section intelliview-style">
+                <label className="preparation-label intelliview-style">Job Description</label>
+                <div className="preparation-textarea-wrap">
+                  <span className="textarea-icon">📄</span>
+                  <textarea
+                    className="preparation-textarea intelliview-style"
+                    placeholder="Paste the job description here"
+                    value={jobDescription}
+                    onChange={(event) => setJobDescription(event.target.value)}
+                    rows="4"
+                  />
+                </div>
               </section>
 
-              <div className="preparation-actions">
+              <div className="preparation-actions intelliview-style">
                 <button type="submit" className="primary-button" disabled={submitting || !resumeFile}>
                   {submitting ? "Preparing…" : "Submit Interview Preparation"}
                 </button>
